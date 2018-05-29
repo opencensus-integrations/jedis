@@ -21,6 +21,11 @@ import redis.clients.jedis.util.RedisInputStream;
 import redis.clients.jedis.util.RedisOutputStream;
 import redis.clients.jedis.util.SafeEncoder;
 
+// Distributed tracing and monitoring
+import redis.clients.jedis.Observability;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+
 public class Connection implements Closeable {
 
   private static final byte[][] EMPTY_ARGS = new byte[0][];
@@ -121,6 +126,8 @@ public class Connection implements Closeable {
   }
 
   public void sendCommand(final ProtocolCommand cmd, final byte[]... args) {
+    Span span = Observability.startSpan("redis.Connection.sendCommand");
+
     try {
       connect();
       Protocol.sendCommand(outputStream, cmd, args);
@@ -143,7 +150,10 @@ public class Connection implements Closeable {
       }
       // Any other exceptions related to connection?
       broken = true;
+      span.setStatus(Status.INTERNAL.withDescription(ex.toString()));
       throw ex;
+    } finally {
+      span.end();
     }
   }
 
@@ -164,8 +174,14 @@ public class Connection implements Closeable {
   }
 
   public void connect() {
-    if (!isConnected()) {
-      try {
+    if (isConnected()) {
+      return;
+    }
+
+    Span span = Observability.startSpan("redis.Connection.connect");
+    long startDialTimeNs = System.nanoTime();
+
+    try {
         socket = new Socket();
         // ->@wjw_add
         socket.setReuseAddress(true);
@@ -178,8 +194,18 @@ public class Connection implements Closeable {
         // immediately
         // <-@wjw_add
 
+        Observability.annotateSpan(span, "Connecting", 
+                Observability.createAttribute("connection_timeout", connectionTimeout),
+                Observability.createAttribute("keep_alive", true),
+                Observability.createAttribute("no_tcp_delay", true),
+                Observability.createAttribute("reuse_address", true),
+                Observability.createAttribute("so_timeout", soTimeout),
+                Observability.createAttribute("ssl", ssl));
+
+        span.addAnnotation("Connecting");
         socket.connect(new InetSocketAddress(host, port), connectionTimeout);
         socket.setSoTimeout(soTimeout);
+        span.addAnnotation("Connected");
 
         if (ssl) {
           if (null == sslSocketFactory) {
@@ -193,17 +219,25 @@ public class Connection implements Closeable {
               (!hostnameVerifier.verify(host, ((SSLSocket) socket).getSession()))) {
             String message = String.format(
                 "The connection to '%s' failed ssl/tls hostname verification.", host);
+            span.setStatus(Status.INTERNAL.withDescription(message));
             throw new JedisConnectionException(message);
           }
         }
 
         outputStream = new RedisOutputStream(socket.getOutputStream());
         inputStream = new RedisInputStream(socket.getInputStream());
-      } catch (IOException ex) {
+        span.addAnnotation("Created input and output streams");
+    } catch (IOException ex) {
         broken = true;
-        throw new JedisConnectionException("Failed connecting to host " 
+        String message = String.format("Failed connecting to host " 
             + host + ":" + port, ex);
-      }
+        span.setStatus(Status.INTERNAL.withDescription(message));
+        throw new JedisConnectionException(message);
+    } finally {
+        long totalDialTimeNs = System.nanoTime() - startDialTimeNs;
+        double timeSpentSeconds = (new Double(totalDialTimeNs))/1e9;
+        Observability.recordStat(Observability.MDialLatencySeconds, timeSpentSeconds);
+        span.end();
     }
   }
 
@@ -213,16 +247,20 @@ public class Connection implements Closeable {
   }
 
   public void disconnect() {
-    if (isConnected()) {
-      try {
-        outputStream.flush();
-        socket.close();
-      } catch (IOException ex) {
-        broken = true;
-        throw new JedisConnectionException(ex);
-      } finally {
-        IOUtils.closeQuietly(socket);
-      }
+    if (!isConnected())
+        return;
+
+    Span span = Observability.startSpan("redis.Connection.disconnect");
+
+    try {
+      outputStream.flush();
+      socket.close();
+    } catch (IOException ex) {
+      broken = true;
+      throw new JedisConnectionException(ex);
+    } finally {
+      IOUtils.closeQuietly(socket);
+      span.end();
     }
   }
 
@@ -296,33 +334,52 @@ public class Connection implements Closeable {
   }
 
   protected void flush() {
+    Span span = Observability.startSpan("redis.Connection.flush");
+
     try {
       outputStream.flush();
     } catch (IOException ex) {
       broken = true;
       throw new JedisConnectionException(ex);
+    } finally {
+      span.end();
     }
   }
 
   protected Object readProtocolWithCheckingBroken() {
+    Span span = Observability.startSpan("redis.Connection.readProtocolWithCheckingBroken");
+
     try {
       return Protocol.read(inputStream);
     } catch (JedisConnectionException exc) {
+      span.setStatus(Status.INTERNAL.withDescription(exc.toString()));
       broken = true;
       throw exc;
+    } finally {
+      span.end();
     }
   }
 
   public List<Object> getMany(final int count) {
-    flush();
-    final List<Object> responses = new ArrayList<Object>(count);
-    for (int i = 0; i < count; i++) {
-      try {
-        responses.add(readProtocolWithCheckingBroken());
-      } catch (JedisDataException e) {
-        responses.add(e);
-      }
+    Span span = Observability.startSpan("redis.Connection.getMany");
+
+    try {
+        span.addAnnotation("Invoking flush");
+        flush();
+        span.addAnnotation("Flushed");
+
+        Observability.annotateSpan(span, "Getting responses back", new Observability.Attribute("count", count));
+        final List<Object> responses = new ArrayList<Object>(count);
+        for (int i = 0; i < count; i++) {
+          try {
+            responses.add(readProtocolWithCheckingBroken());
+          } catch (JedisDataException e) {
+            responses.add(e);
+          }
+        }
+       return responses;
+    } finally {
+        span.end();
     }
-    return responses;
   }
 }
