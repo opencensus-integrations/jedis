@@ -32,19 +32,19 @@ import java.util.List;
 
 public class Observability {
     private static final String dimensionless = "1";
-    private static final String seconds = "1";
+    private static final String milliseconds = "ms";
 
     public static final MeasureLong MBytesRead = MeasureLong.create("redis/bytes_read", "The number of bytes read from the server", dimensionless);
     public static final MeasureLong MBytesWritten = MeasureLong.create("redis/bytes_written", "The number of bytes written to the server", dimensionless);
     public static final MeasureLong MDials = MeasureLong.create("redis/dials", "The number of dials", dimensionless);
     public static final MeasureLong MDialErrors = MeasureLong.create("redis/dial_errors", "The number of dial errors", dimensionless);
-    public static final MeasureDouble MDialLatencySeconds = MeasureDouble.create("redis/dial_latency_seconds", "The number of seconds spent dialling to the Redis server", dimensionless);
+    public static final MeasureDouble MDialLatencyMilliseconds = MeasureDouble.create("redis/dial_latency_milliseconds", "The number of milliseconds spent dialling to the Redis server", milliseconds);
     public final MeasureLong MConnectionsTaken = MeasureLong.create("redis/connections_taken", "The number of connections taken", dimensionless);
     public static final MeasureLong MConnectionsClosed = MeasureLong.create("redis/connections_closed", "The number of connections closed", dimensionless);
     public static final MeasureLong MConnectionsReturned = MeasureLong.create("redis/connections_returned", "The number of connections returned to the pool", dimensionless);
     public static final MeasureLong MConnectionsReused = MeasureLong.create("redis/connections_reused", "The number of connections reused from to the pool", dimensionless);
     public static final MeasureLong MConnectionsNew = MeasureLong.create("redis/connections_new", "The number of newly created connections", dimensionless);
-    public static final MeasureDouble MRoundtripLatencySeconds = MeasureDouble.create("redis/roundtrip_latency", "The time in seconds between sending the first byte to the server until the last byte of response", dimensionless);
+    public static final MeasureDouble MRoundtripLatencyMilliseconds = MeasureDouble.create("redis/roundtrip_latency", "The time in milliseconds between sending the first byte to the server until the last byte of response", milliseconds);
     public static final MeasureLong MWriteErrors = MeasureLong.create("redis/write_errors", "The number of errors encountered during write routines", dimensionless);
     public static final MeasureLong MReadErrors = MeasureLong.create("redis/read_errors", "The number of errors encountered during read routines", dimensionless);
     public static final MeasureLong MReads = MeasureLong.create("redis/reads", "The number of read invocations", dimensionless);
@@ -95,10 +95,11 @@ public class Observability {
         span.addAnnotation(Annotation.fromDescriptionAndAttributes(description, hm));
     }
 
-    public static class RoundtripTrackingSpan {
+    public static class RoundtripTrackingSpan implements AutoCloseable {
         private Span span;
         private long startTimeNs; 
         private String commandName;
+        private boolean closed;
 
         public RoundtripTrackingSpan(String name, String commandName) {
             this.span = tracer.spanBuilder(name).startSpan();
@@ -107,9 +108,18 @@ public class Observability {
         }
 
         public void end() {
+            if (this.closed)
+                return;
+
             long totalTimeNs = System.nanoTime() - this.startTimeNs;
-            double timeSpentSeconds = (new Double(totalTimeNs))/1e9;
-            recordTaggedStat(KeyCommandName, this.commandName, MRoundtripLatencySeconds, timeSpentSeconds);
+            double timeSpentMilliseconds = (new Double(totalTimeNs))/1e6;
+            recordTaggedStat(KeyCommandName, this.commandName, MRoundtripLatencyMilliseconds, timeSpentMilliseconds);
+            this.closed = true;
+            this.span.end();
+        }
+
+        public void close() {
+            this.end();
         }
     }
 
@@ -147,7 +157,7 @@ public class Observability {
                     0.0, 1024.0, 2048.0, 4096.0, 16384.0, 65536.0, 262144.0, 1048576.0, 4194304.0, 16777216.0, 67108864.0, 268435456.0, 1073741824.0, 2147483648.0)
                     ));
 
-        Aggregation defaultSecondsDistribution =  Distribution.create(BucketBoundaries.create(Arrays.asList(
+        Aggregation defaultMillisecondsDistribution =  Distribution.create(BucketBoundaries.create(Arrays.asList(
                         // [0ms, 0.001ms, 0.005ms, 0.01ms, 0.05ms, 0.1ms, 0.5ms, 1ms, 1.5ms, 2ms, 2.5ms, 5ms, 10ms, 25ms, 50ms, 100ms, 200ms, 400ms, 600ms, 800ms, 1s, 1.5s, 2.5s, 5s, 10s, 20s, 40s, 100s, 200s, 500s]
                         0.0, 0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.5, 5.0, 10.0, 20.0, 40.0, 100.0, 200.0, 500.0)));
                 
@@ -171,16 +181,16 @@ public class Observability {
 
             View.create(
                     Name.create("redis/client/dial_latency"),
-                    "The number of seconds spent dialling",
-                    MDialLatencySeconds,
-                    defaultSecondsDistribution,
+                    "The number of milliseconds spent dialling",
+                    MDialLatencyMilliseconds,
+                    defaultMillisecondsDistribution,
                     noKeys),
 
             View.create(
-                    Name.create("redis/client/bytes_read_cumulative"),
+                    Name.create("redis/client/bytes_read_count"),
                     "The number of bytes read back from the server",
                     MBytesRead,
-                    defaultBytesDistribution,
+                    countAggregation,
                     noKeys),
 
             View.create(
@@ -194,11 +204,11 @@ public class Observability {
                     Name.create("redis/client/bytes_written_cumulative"),
                     "The number of bytes written to the server",
                     MBytesWritten,
-                    defaultBytesDistribution,
+                    countAggregation,
                     noKeys),
 
             View.create(
-                    Name.create("redis/client/bytes_written_cumulative"),
+                    Name.create("redis/client/bytes_written_distribution"),
                     "The number of bytes written to the server",
                     MBytesWritten,
                     defaultBytesDistribution,
@@ -206,9 +216,9 @@ public class Observability {
 
             View.create(
                     Name.create("redis/client/roundtrip_latency"),
-                    "The distribution of seconds",
-                    MRoundtripLatencySeconds,
-                    defaultSecondsDistribution,
+                    "The distribution of milliseconds",
+                    MRoundtripLatencyMilliseconds,
+                    defaultMillisecondsDistribution,
                     noKeys),
 
             View.create(

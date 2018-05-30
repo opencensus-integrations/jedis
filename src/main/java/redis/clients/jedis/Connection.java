@@ -235,8 +235,8 @@ public class Connection implements Closeable {
         throw new JedisConnectionException(message);
     } finally {
         long totalDialTimeNs = System.nanoTime() - startDialTimeNs;
-        double timeSpentSeconds = (new Double(totalDialTimeNs))/1e9;
-        Observability.recordStat(Observability.MDialLatencySeconds, timeSpentSeconds);
+        double timeSpentMilliseconds = (new Double(totalDialTimeNs))/1e6;
+        Observability.recordStat(Observability.MDialLatencyMilliseconds, timeSpentMilliseconds);
         span.end();
     }
   }

@@ -90,6 +90,12 @@
                         <artifactId>opencensus-api</artifactId>
                         <version>0.13.2</version>
                 </dependency>
+
+                <dependency><!-- Necessary dependency with OpenCensus. Please see https://github.com/census-instrumentation/opencensus-java/issues/1220#issuecomment-393340392-->
+                       <groupId>com.google.guava</groupId>
+                        <artifactId>guava</artifactId>
+                        <version>25.1-jre</version>
+                </dependency>
 	</dependencies>
 
   <distributionManagement>
