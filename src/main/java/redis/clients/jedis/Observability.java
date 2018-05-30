@@ -24,6 +24,7 @@ import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -129,7 +130,7 @@ public class Observability {
                         0.0, 0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.5, 5.0, 10.0, 20.0, 40.0, 100.0, 200.0, 500.0)));
                 
         Aggregation countAggregation = Aggregation.Count.create();
-        List<TagKey> noKeys = null;
+        List<TagKey> noKeys = new ArrayList<TagKey>();
 
         View[] views = new View[]{
             View.create(
