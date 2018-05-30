@@ -95,6 +95,28 @@ public class Observability {
         span.addAnnotation(Annotation.fromDescriptionAndAttributes(description, hm));
     }
 
+    public static class RoundtripTrackingSpan {
+        private Span span;
+        private long startTimeNs; 
+        private String commandName;
+
+        public RoundtripTrackingSpan(String name, String commandName) {
+            this.span = tracer.spanBuilder(name).startSpan();
+            this.startTimeNs = System.nanoTime();
+            this.commandName = commandName;
+        }
+
+        public void end() {
+            long totalTimeNs = System.nanoTime() - this.startTimeNs;
+            double timeSpentSeconds = (new Double(totalTimeNs))/1e9;
+            recordTaggedStat(KeyCommandName, this.commandName, MRoundtripLatencySeconds, timeSpentSeconds);
+        }
+    }
+
+    public static RoundtripTrackingSpan createRoundtripTrackingSpan(String spanName, String commandName) {
+        return new RoundtripTrackingSpan(spanName, commandName);
+    }
+
     public static class Attribute {
         private String Key;
         private AttributeValue Value;
