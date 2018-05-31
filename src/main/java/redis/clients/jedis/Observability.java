@@ -40,10 +40,11 @@ public class Observability {
     public static final MeasureLong MDialErrors = MeasureLong.create("redis/dial_errors", "The number of dial errors", dimensionless);
     public static final MeasureDouble MDialLatencyMilliseconds = MeasureDouble.create("redis/dial_latency_milliseconds", "The number of milliseconds spent dialling to the Redis server", milliseconds);
     public final MeasureLong MConnectionsTaken = MeasureLong.create("redis/connections_taken", "The number of connections taken", dimensionless);
-    public static final MeasureLong MConnectionsClosed = MeasureLong.create("redis/connections_closed", "The number of connections closed", dimensionless);
+    public static final MeasureLong MConnectionsClosedErrors = MeasureLong.create("redis/connection_closed_errors", "The number of errors encountered while closing or from closed connections", dimensionless);
     public static final MeasureLong MConnectionsReturned = MeasureLong.create("redis/connections_returned", "The number of connections returned to the pool", dimensionless);
     public static final MeasureLong MConnectionsReused = MeasureLong.create("redis/connections_reused", "The number of connections reused from to the pool", dimensionless);
-    public static final MeasureLong MConnectionsNew = MeasureLong.create("redis/connections_new", "The number of newly created connections", dimensionless);
+    public static final MeasureLong MConnectionsOpened = MeasureLong.create("redis/connections_opened", "The number of opened connections", dimensionless);
+    public static final MeasureLong MConnectionsClosed = MeasureLong.create("redis/connections_closed", "The number of closed connections", dimensionless);
     public static final MeasureDouble MRoundtripLatencyMilliseconds = MeasureDouble.create("redis/roundtrip_latency", "The time in milliseconds between sending the first byte to the server until the last byte of response", milliseconds);
     public static final MeasureLong MWriteErrors = MeasureLong.create("redis/write_errors", "The number of errors encountered during write routines", dimensionless);
     public static final MeasureLong MReadErrors = MeasureLong.create("redis/read_errors", "The number of errors encountered during read routines", dimensionless);
@@ -56,11 +57,19 @@ public class Observability {
     private static Tracer tracer = Tracing.getTracer();
 
     public static void recordStat(MeasureLong ml, Long n) {
-            statsRecorder.newMeasureMap().put(ml, n).record();
+        statsRecorder.newMeasureMap().put(ml, n).record();
+    }
+
+    public static void recordStat(MeasureLong ml, int n) {
+        statsRecorder.newMeasureMap().put(ml, n).record();
     }
 
     public static void recordStat(MeasureDouble md, Double d) {
-            statsRecorder.newMeasureMap().put(md, d).record();
+        statsRecorder.newMeasureMap().put(md, d).record();
+    }
+
+    public static void recordTaggedStat(TagKey key, String value, MeasureLong ml, int n) {
+        recordTaggedStat(key, value, ml, new Long(n));
     }
 
     public static void recordTaggedStat(TagKey key, String value, MeasureLong ml, Long n) {
@@ -184,6 +193,20 @@ public class Observability {
                     "The number of milliseconds spent dialling",
                     MDialLatencyMilliseconds,
                     defaultMillisecondsDistribution,
+                    noKeys),
+
+            View.create(
+                    Name.create("redis/client/connections_opened"),
+                    "The number of opened connections",
+                    MConnectionsOpened,
+                    countAggregation,
+                    noKeys),
+
+            View.create(
+                    Name.create("redis/client/connections_closed"),
+                    "The number of closed connections",
+                    MConnectionsClosed,
+                    countAggregation,
                     noKeys),
 
             View.create(

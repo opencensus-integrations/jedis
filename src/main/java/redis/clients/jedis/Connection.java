@@ -226,6 +226,7 @@ public class Connection implements Closeable {
 
         outputStream = new RedisOutputStream(socket.getOutputStream());
         inputStream = new RedisInputStream(socket.getInputStream());
+        Observability.recordStat(Observability.MConnectionsOpened, 1);
         span.addAnnotation("Created input and output streams");
     } catch (IOException ex) {
         broken = true;
@@ -255,8 +256,10 @@ public class Connection implements Closeable {
     try {
       outputStream.flush();
       socket.close();
+      Observability.recordStat(Observability.MConnectionsClosed, 1);
     } catch (IOException ex) {
       broken = true;
+      Observability.recordStat(Observability.MConnectionsClosedErrors, new Long(1));
       throw new JedisConnectionException(ex);
     } finally {
       IOUtils.closeQuietly(socket);
