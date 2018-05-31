@@ -175,6 +175,7 @@ public class Connection implements Closeable {
 
   public void connect() {
     if (isConnected()) {
+      Observability.recordStat(Observability.MConnectionsReused, 1);
       return;
     }
 
@@ -202,7 +203,6 @@ public class Connection implements Closeable {
                 Observability.createAttribute("so_timeout", soTimeout),
                 Observability.createAttribute("ssl", ssl));
 
-        span.addAnnotation("Connecting");
         socket.connect(new InetSocketAddress(host, port), connectionTimeout);
         socket.setSoTimeout(soTimeout);
         span.addAnnotation("Connected");
@@ -259,7 +259,7 @@ public class Connection implements Closeable {
       Observability.recordStat(Observability.MConnectionsClosed, 1);
     } catch (IOException ex) {
       broken = true;
-      Observability.recordStat(Observability.MConnectionsClosedErrors, new Long(1));
+      Observability.recordStat(Observability.MConnectionsClosedErrors, 1);
       throw new JedisConnectionException(ex);
     } finally {
       IOUtils.closeQuietly(socket);
@@ -370,8 +370,8 @@ public class Connection implements Closeable {
         span.addAnnotation("Invoking flush");
         flush();
         span.addAnnotation("Flushed");
+        Observability.annotateSpan(span, "Getting responses back", Observability.createAttribute("count", count));
 
-        Observability.annotateSpan(span, "Getting responses back", new Observability.Attribute("count", count));
         final List<Object> responses = new ArrayList<Object>(count);
         for (int i = 0; i < count; i++) {
           try {

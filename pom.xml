@@ -88,7 +88,7 @@
                 <dependency>
                         <groupId>io.opencensus</groupId>
                         <artifactId>opencensus-api</artifactId>
-                        <version>0.13.2</version>
+                        <version>0.14.0</version>
                 </dependency>
 
                 <dependency><!-- Necessary dependency with OpenCensus. Please see https://github.com/census-instrumentation/opencensus-java/issues/1220#issuecomment-393340392-->

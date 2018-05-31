@@ -203,6 +203,13 @@ public class Observability {
                     noKeys),
 
             View.create(
+                    Name.create("redis/client/connections_reused"),
+                    "The number of reused connections",
+                    MConnectionsReused,
+                    countAggregation,
+                    noKeys),
+
+            View.create(
                     Name.create("redis/client/connections_closed"),
                     "The number of closed connections",
                     MConnectionsClosed,
