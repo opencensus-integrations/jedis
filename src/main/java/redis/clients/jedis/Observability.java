@@ -40,7 +40,7 @@ public class Observability {
     public static final MeasureLong MDialErrors = MeasureLong.create("redis/dial_errors", "The number of dial errors", dimensionless);
     public static final MeasureDouble MDialLatencyMilliseconds = MeasureDouble.create("redis/dial_latency_milliseconds", "The number of milliseconds spent dialling to the Redis server", milliseconds);
     public final MeasureLong MConnectionsTaken = MeasureLong.create("redis/connections_taken", "The number of connections taken", dimensionless);
-    public static final MeasureLong MConnectionsClosedErrors = MeasureLong.create("redis/connection_closed_errors", "The number of errors encountered while closing or from closed connections", dimensionless);
+    public static final MeasureLong MConnectionErrors = MeasureLong.create("redis/connection_errors", "The number of any connection related errors", dimensionless);
     public static final MeasureLong MConnectionsReturned = MeasureLong.create("redis/connections_returned", "The number of connections returned to the pool", dimensionless);
     public static final MeasureLong MConnectionsReused = MeasureLong.create("redis/connections_reused", "The number of connections reused from to the pool", dimensionless);
     public static final MeasureLong MConnectionsOpened = MeasureLong.create("redis/connections_opened", "The number of opened connections", dimensionless);
@@ -53,6 +53,7 @@ public class Observability {
 
     private static final StatsRecorder statsRecorder = Stats.getStatsRecorder();
     public static final TagKey KeyCommandName = TagKey.create("cmd");
+    public static final TagKey KeyPhase = TagKey.create("phase");
     private static final Tagger tagger = Tags.getTagger();
     private static Tracer tracer = Tracing.getTracer();
 
@@ -199,6 +200,13 @@ public class Observability {
                     Name.create("redis/client/connections_opened"),
                     "The number of opened connections",
                     MConnectionsOpened,
+                    countAggregation,
+                    noKeys),
+
+            View.create(
+                    Name.create("redis/client/connection_errors"),
+                    "The number of any connection related errors",
+                    MConnectionErrors,
                     countAggregation,
                     noKeys),
 

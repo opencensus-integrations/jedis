@@ -120,6 +120,7 @@ public final class Protocol {
     } catch (IOException e) {
       span.setStatus(Status.INTERNAL.withDescription(e.toString()));
       Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MWriteErrors, 1);
+      Observability.recordTaggedStat(Observability.KeyPhase, "write", Observability.MConnectionErrors, 1);
       throw new JedisConnectionException(e);
     } finally {
       span.end();
@@ -223,7 +224,7 @@ public final class Protocol {
             String message = "It seems like server has closed the connection";
             span.setStatus(Status.INTERNAL.withDescription(message));
             Observability.recordTaggedStat(Observability.KeyCommandName, "processBulkReply", Observability.MReadErrors, 1);
-            Observability.recordTaggedStat(Observability.KeyCommandName, "processBulkReply", Observability.MConnectionsClosedErrors, 1);
+            Observability.recordTaggedStat(Observability.KeyPhase, "read", Observability.MConnectionErrors, 1);
             throw new JedisConnectionException(message);
           }
           offset += size;
@@ -250,14 +251,20 @@ public final class Protocol {
     if (num == -1) {
       return null;
     }
+    long nDataExceptions = 0;
     final List<Object> ret = new ArrayList<Object>(num);
     for (int i = 0; i < num; i++) {
       try {
         ret.add(process(is));
       } catch (JedisDataException e) {
+        nDataExceptions += 1;
         ret.add(e);
       }
     }
+
+    if (nDataExceptions > 0)
+      Observability.recordTaggedStat(Observability.KeyCommandName, "processMultiBulkReply", Observability.MReadErrors, nDataExceptions);
+
     return ret;
   }
 

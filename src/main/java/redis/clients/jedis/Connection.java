@@ -232,6 +232,7 @@ public class Connection implements Closeable {
         broken = true;
         String message = String.format("Failed connecting to host " 
             + host + ":" + port, ex);
+        Observability.recordTaggedStat(Observability.KeyPhase, "connect", Observability.MConnectionErrors, 1);
         span.setStatus(Status.INTERNAL.withDescription(message));
         throw new JedisConnectionException(message);
     } finally {
@@ -259,7 +260,7 @@ public class Connection implements Closeable {
       Observability.recordStat(Observability.MConnectionsClosed, 1);
     } catch (IOException ex) {
       broken = true;
-      Observability.recordStat(Observability.MConnectionsClosedErrors, 1);
+      Observability.recordTaggedStat(Observability.KeyPhase, "disconnect", Observability.MConnectionErrors, 1);
       throw new JedisConnectionException(ex);
     } finally {
       IOUtils.closeQuietly(socket);
@@ -343,6 +344,7 @@ public class Connection implements Closeable {
       outputStream.flush();
     } catch (IOException ex) {
       broken = true;
+      Observability.recordTaggedStat(Observability.KeyPhase, "flush", Observability.MConnectionErrors, 1);
       throw new JedisConnectionException(ex);
     } finally {
       span.end();
@@ -355,6 +357,7 @@ public class Connection implements Closeable {
     try {
       return Protocol.read(inputStream);
     } catch (JedisConnectionException exc) {
+      Observability.recordTaggedStat(Observability.KeyPhase, "readProtocolWithCheckingBroken", Observability.MConnectionErrors, 1);
       span.setStatus(Status.INTERNAL.withDescription(exc.toString()));
       broken = true;
       throw exc;
@@ -372,14 +375,20 @@ public class Connection implements Closeable {
         span.addAnnotation("Flushed");
         Observability.annotateSpan(span, "Getting responses back", Observability.createAttribute("count", count));
 
+        long nDataExceptions = 0;
         final List<Object> responses = new ArrayList<Object>(count);
         for (int i = 0; i < count; i++) {
           try {
             responses.add(readProtocolWithCheckingBroken());
           } catch (JedisDataException e) {
+            nDataExceptions += 1;
             responses.add(e);
           }
         }
+
+        if (nDataExceptions > 0)
+          Observability.recordTaggedStat(Observability.KeyCommandName, "getMany", Observability.MReadErrors, nDataExceptions);
+
        return responses;
     } finally {
         span.end();
