@@ -93,8 +93,13 @@ public class Observability {
         }
     }
 
+    // startSpan starts a span and inserts it into the current
+    // scope. It is the caller's responsibility to invoke
+    //      span.end()
+    // when finished using the span.
     public static Span startSpan(String name) {
-        return tracer.spanBuilder(name).startSpan();
+        tracer.spanBuilder(name).startScopedSpan();
+        return tracer.getCurrentSpan();
     }
 
     public static void annotateSpan(Span span, String description, Attribute ...attributes) {
@@ -107,12 +112,14 @@ public class Observability {
 
     public static class RoundtripTrackingSpan implements AutoCloseable {
         private Span span;
+        private Scope spanScope;
         private long startTimeNs; 
         private String commandName;
         private boolean closed;
 
         public RoundtripTrackingSpan(String name, String commandName) {
-            this.span = tracer.spanBuilder(name).startSpan();
+            this.spanScope = tracer.spanBuilder(name).startScopedSpan();
+            this.span = tracer.getCurrentSpan();
             this.startTimeNs = System.nanoTime();
             this.commandName = commandName;
         }
@@ -125,7 +132,7 @@ public class Observability {
             double timeSpentMilliseconds = (new Double(totalTimeNs))/1e6;
             recordTaggedStat(KeyCommandName, this.commandName, MRoundtripLatencyMilliseconds, timeSpentMilliseconds);
             this.closed = true;
-            this.span.end();
+            this.spanScope.close();
         }
 
         public void close() {
