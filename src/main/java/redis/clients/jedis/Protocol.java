@@ -19,7 +19,7 @@ import redis.clients.jedis.util.RedisOutputStream;
 import redis.clients.jedis.util.SafeEncoder;
 
 // Distributed tracing and monitoring
-import io.opencensus.trace.Span;
+import redis.clients.jedis.Observability.ScopedSpan;
 import io.opencensus.trace.Status;
 
 public final class Protocol {
@@ -95,7 +95,7 @@ public final class Protocol {
 
   private static void sendCommand(final RedisOutputStream os, final byte[] command,
       final byte[]... args) {
-    Span span = Observability.startSpan("jedis.Protocol.sendCommand");
+    ScopedSpan ss = Observability.createScopedSpan("jedis.Protocol.sendCommand");
 
     try {
       os.write(ASTERISK_BYTE);
@@ -118,12 +118,12 @@ public final class Protocol {
       Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MWrites, 1);
       Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MBytesWritten, totalBytesWritten);
     } catch (IOException e) {
-      span.setStatus(Status.INTERNAL.withDescription(e.toString()));
+      ss.span.setStatus(Status.INTERNAL.withDescription(e.toString()));
       Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MWriteErrors, 1);
       Observability.recordTaggedStat(Observability.KeyPhase, "write", Observability.MConnectionErrors, 1);
       throw new JedisConnectionException(e);
     } finally {
-      span.end();
+      ss.end();
     }
   }
 
@@ -195,7 +195,7 @@ public final class Protocol {
   }
 
   private static byte[] processStatusCodeReply(final RedisInputStream is) {
-    Span span = Observability.startSpan("jedis.Protocol.processStatusCodeReply");
+    ScopedSpan ss = Observability.createScopedSpan("jedis.Protocol.processStatusCodeReply");
 
     try {
         byte[] line = is.readLineBytes();
@@ -203,12 +203,12 @@ public final class Protocol {
         Observability.recordStat(Observability.MBytesRead, line.length);
         return line;
     } finally {
-        span.end();
+        ss.end();
     }
   }
 
   private static byte[] processBulkReply(final RedisInputStream is) {
-    Span span = Observability.startSpan("jedis.Protocol.processBulkReply");
+    ScopedSpan ss = Observability.createScopedSpan("jedis.Protocol.processBulkReply");
 
     try {
         final int len = is.readIntCrLf();
@@ -222,7 +222,7 @@ public final class Protocol {
           final int size = is.read(read, offset, (len - offset));
           if (size == -1) {
             String message = "It seems like server has closed the connection";
-            span.setStatus(Status.INTERNAL.withDescription(message));
+            ss.span.setStatus(Status.INTERNAL.withDescription(message));
             Observability.recordTaggedStat(Observability.KeyCommandName, "processBulkReply", Observability.MReadErrors, 1);
             Observability.recordTaggedStat(Observability.KeyPhase, "read", Observability.MConnectionErrors, 1);
             throw new JedisConnectionException(message);
@@ -238,7 +238,7 @@ public final class Protocol {
         Observability.recordStat(Observability.MBytesRead, read.length + 2);
         return read;
     } finally {
-        span.end();
+        ss.end();
     }
   }
 

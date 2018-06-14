@@ -93,13 +93,27 @@ public class Observability {
         }
     }
 
-    // startSpan starts a span and inserts it into the current
-    // scope. It is the caller's responsibility to invoke
-    //      span.end()
-    // when finished using the span.
-    public static Span startSpan(String name) {
-        tracer.spanBuilder(name).startScopedSpan();
-        return tracer.getCurrentSpan();
+    public static class ScopedSpan implements AutoCloseable {
+        public Scope scope;
+        public Span span;
+
+        public ScopedSpan(String spanName) {
+            this.scope = tracer.spanBuilder(spanName).startScopedSpan();
+            this.span  = tracer.getCurrentSpan();
+        }
+
+        public void close() {
+            this.span.end();
+            this.scope.close();
+        }
+
+        public void end() {
+            this.close();
+        }
+    }
+
+    public static ScopedSpan createScopedSpan(String spanName) {
+        return new ScopedSpan(spanName);
     }
 
     public static void annotateSpan(Span span, String description, Attribute ...attributes) {
