@@ -54,6 +54,7 @@ public class Observability {
     // The respective tags
     public static final TagKey KeyCommandName = TagKey.create("command");
     public static final TagKey KeyEnum = TagKey.create("enum");
+    public static final TagKey KeyKey = TagKey.create("key");
     public static final TagKey KeyPhase = TagKey.create("phase");
 
     private static final Tagger tagger = Tags.getTagger();
@@ -88,6 +89,24 @@ public class Observability {
     public static void recordTaggedStat(TagKey key, String value, MeasureDouble md, Double n) {
         TagContext tctx = tagger.emptyBuilder().put(key, TagValue.create(value)).build();
         Scope ss = tagger.withTagContext(tctx);
+        try {
+            statsRecorder.newMeasureMap().put(md, n).record();
+        } finally {
+            ss.close();
+        }
+    }
+
+    public static void recordStatWithTags(MeasureDouble md, Double n, TagKeyPair ...pairs) {
+        TagContextBuilder tb = tagger.emptyBuilder();
+
+        for (TagKeyPair kvp : pairs) {
+            tb.put(kvp.key, TagValue.create(kvp.value));
+        }
+
+        // Then finally build it
+        TagContext tctx = tb.build();
+        Scope ss = tagger.withTagContext(tctx);
+
         try {
             statsRecorder.newMeasureMap().put(md, n).record();
         } finally {
@@ -164,6 +183,7 @@ public class Observability {
         private long startTimeNs; 
         private String commandName;
         private boolean closed;
+        private String keyUsed;
 
         public RoundtripTrackingSpan(String name, String commandName) {
             this.spanScope = tracer.spanBuilder(name).startScopedSpan();
@@ -172,13 +192,28 @@ public class Observability {
             this.commandName = commandName;
         }
 
+        public RoundtripTrackingSpan(String name, String commandName, String potentialHotKey) {
+            this.spanScope = tracer.spanBuilder(name).startScopedSpan();
+            this.span = tracer.getCurrentSpan();
+            this.startTimeNs = System.nanoTime();
+            this.commandName = commandName;
+            this.keyUsed = potentialHotKey;
+        }
+
+
         public void end() {
             if (this.closed)
                 return;
 
             long totalTimeNs = System.nanoTime() - this.startTimeNs;
             double timeSpentMilliseconds = (new Double(totalTimeNs))/1e6;
-            recordTaggedStat(KeyCommandName, this.commandName, MRoundtripLatencyMilliseconds, timeSpentMilliseconds);
+            if (this.keyUsed == null)
+                recordTaggedStat(KeyCommandName, this.commandName, MRoundtripLatencyMilliseconds, timeSpentMilliseconds);
+            else 
+                recordStatWithTags(MRoundtripLatencyMilliseconds, timeSpentMilliseconds,
+                                   Observability.tagKeyPair(Observability.KeyKey, this.keyUsed),
+                                   Observability.tagKeyPair(Observability.KeyCommandName, this.commandName));
+
             this.closed = true;
             this.spanScope.close();
         }
@@ -190,6 +225,10 @@ public class Observability {
 
     public static RoundtripTrackingSpan createRoundtripTrackingSpan(String spanName, String commandName) {
         return new RoundtripTrackingSpan(spanName, commandName);
+    }
+
+    public static RoundtripTrackingSpan createRoundtripTrackingSpan(String spanName, String commandName, String potentialHotKey) {
+        return new RoundtripTrackingSpan(spanName, commandName, potentialHotKey);
     }
 
     public static class Attribute {
@@ -298,7 +337,7 @@ public class Observability {
                     "The distribution of milliseconds",
                     MRoundtripLatencyMilliseconds,
                     defaultMillisecondsDistribution,
-                    Collections.singletonList(KeyCommandName)),
+                    Collections.unmodifiableList(Arrays.asList(KeyCommandName, KeyKey))),
 
             View.create(
                     Name.create("redis/client/writes"),
