@@ -284,28 +284,28 @@ public class Observability {
                     "The number of bytes written to the server",
                     MBytesWritten,
                     countAggregation,
-                    noKeys),
+                    Collections.singletonList(KeyCommandName)),
 
             View.create(
                     Name.create("redis/client/bytes_written_distribution"),
                     "The number of bytes written to the server",
                     MBytesWritten,
                     defaultBytesDistribution,
-                    noKeys),
+                    Collections.singletonList(KeyCommandName)),
 
             View.create(
                     Name.create("redis/client/roundtrip_latency"),
                     "The distribution of milliseconds",
                     MRoundtripLatencyMilliseconds,
                     defaultMillisecondsDistribution,
-                    noKeys),
+                    Collections.singletonList(KeyCommandName)),
 
             View.create(
                     Name.create("redis/client/writes"),
                     "The number of writes",
                     MWrites,
                     countAggregation,
-                    noKeys),
+                    Collections.singletonList(KeyCommandName)),
 
             View.create(
                     Name.create("redis/client/reads"),
