@@ -17,6 +17,7 @@ import io.opencensus.tags.TagKey;
 import io.opencensus.tags.Tagger;
 import io.opencensus.tags.Tags;
 import io.opencensus.tags.TagContext;
+import io.opencensus.tags.TagContextBuilder;
 import io.opencensus.tags.TagValue;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
@@ -37,23 +38,24 @@ public class Observability {
     public static final MeasureLong MBytesRead = MeasureLong.create("redis/bytes_read", "The number of bytes read from the server", dimensionless);
     public static final MeasureLong MBytesWritten = MeasureLong.create("redis/bytes_written", "The number of bytes written to the server", dimensionless);
     public static final MeasureLong MDials = MeasureLong.create("redis/dials", "The number of dials", dimensionless);
-    public static final MeasureLong MDialErrors = MeasureLong.create("redis/dial_errors", "The number of dial errors", dimensionless);
     public static final MeasureDouble MDialLatencyMilliseconds = MeasureDouble.create("redis/dial_latency_milliseconds", "The number of milliseconds spent dialling to the Redis server", milliseconds);
     public final MeasureLong MConnectionsTaken = MeasureLong.create("redis/connections_taken", "The number of connections taken", dimensionless);
-    public static final MeasureLong MConnectionErrors = MeasureLong.create("redis/connection_errors", "The number of any connection related errors", dimensionless);
+    public static final MeasureLong MErrors = MeasureLong.create("redis/errors", "The number of errors encountered", dimensionless);
     public static final MeasureLong MConnectionsReturned = MeasureLong.create("redis/connections_returned", "The number of connections returned to the pool", dimensionless);
     public static final MeasureLong MConnectionsReused = MeasureLong.create("redis/connections_reused", "The number of connections reused from to the pool", dimensionless);
     public static final MeasureLong MConnectionsOpened = MeasureLong.create("redis/connections_opened", "The number of opened connections", dimensionless);
     public static final MeasureLong MConnectionsClosed = MeasureLong.create("redis/connections_closed", "The number of closed connections", dimensionless);
     public static final MeasureDouble MRoundtripLatencyMilliseconds = MeasureDouble.create("redis/roundtrip_latency", "The time in milliseconds between sending the first byte to the server until the last byte of response", milliseconds);
-    public static final MeasureLong MWriteErrors = MeasureLong.create("redis/write_errors", "The number of errors encountered during write routines", dimensionless);
-    public static final MeasureLong MReadErrors = MeasureLong.create("redis/read_errors", "The number of errors encountered during read routines", dimensionless);
     public static final MeasureLong MReads = MeasureLong.create("redis/reads", "The number of read invocations", dimensionless);
     public static final MeasureLong MWrites = MeasureLong.create("redis/writes", "The number of write invocations", dimensionless);
 
     private static final StatsRecorder statsRecorder = Stats.getStatsRecorder();
-    public static final TagKey KeyCommandName = TagKey.create("cmd");
+
+    // The respective tags
+    public static final TagKey KeyCommandName = TagKey.create("command");
+    public static final TagKey KeyEnum = TagKey.create("enum");
     public static final TagKey KeyPhase = TagKey.create("phase");
+
     private static final Tagger tagger = Tags.getTagger();
     private static Tracer tracer = Tracing.getTracer();
 
@@ -91,6 +93,38 @@ public class Observability {
         } finally {
             ss.close();
         }
+    }
+
+    public static void recordStatWithTags(MeasureLong ml, long n, TagKeyPair ...pairs) {
+        TagContextBuilder tb = tagger.emptyBuilder();
+
+        for (TagKeyPair kvp : pairs) {
+            tb.put(kvp.key, TagValue.create(kvp.value));
+        }
+
+        // Then finally build it
+        TagContext tctx = tb.build();
+        Scope ss = tagger.withTagContext(tctx);
+
+        try {
+            statsRecorder.newMeasureMap().put(ml, n).record();
+        } finally {
+            ss.close();
+        }
+    }
+
+    public static class TagKeyPair {
+        private TagKey key;
+        private String value;
+
+        public TagKeyPair(TagKey key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+
+    public static TagKeyPair tagKeyPair(TagKey key, String value) {
+        return new TagKeyPair(key, value);
     }
 
     public static class ScopedSpan implements AutoCloseable {
@@ -197,13 +231,6 @@ public class Observability {
 
         View[] views = new View[]{
             View.create(
-                    Name.create("redis/client/dial_errors"),
-                    "The number of errors encountered while dialling",
-                    MDialErrors,
-                    countAggregation,
-                    noKeys),
-
-            View.create(
                     Name.create("redis/client/dials"),
                     "The number of dials",
                     MDials,
@@ -221,13 +248,6 @@ public class Observability {
                     Name.create("redis/client/connections_opened"),
                     "The number of opened connections",
                     MConnectionsOpened,
-                    countAggregation,
-                    noKeys),
-
-            View.create(
-                    Name.create("redis/client/connection_errors"),
-                    "The number of any connection related errors",
-                    MConnectionErrors,
                     countAggregation,
                     noKeys),
 
@@ -281,13 +301,6 @@ public class Observability {
                     noKeys),
 
             View.create(
-                    Name.create("redis/client/write_errors"),
-                    "The number of errors encountered while writing to the server",
-                    MWriteErrors,
-                    countAggregation,
-                    noKeys),
-
-            View.create(
                     Name.create("redis/client/writes"),
                     "The number of writes",
                     MWrites,
@@ -302,11 +315,11 @@ public class Observability {
                     noKeys),
 
             View.create(
-                    Name.create("redis/client/read_errors"),
-                    "The number of read errors",
-                    MReadErrors,
+                    Name.create("redis/client/errors"),
+                    "The number of errors discerned by the various tags",
+                    MErrors,
                     countAggregation,
-                    noKeys)};
+                    Collections.unmodifiableList(Arrays.asList(KeyCommandName, KeyPhase, KeyEnum)))};
 
 
         ViewManager vmgr = Stats.getViewManager();

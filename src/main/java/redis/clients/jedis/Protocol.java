@@ -119,8 +119,11 @@ public final class Protocol {
       Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MBytesWritten, totalBytesWritten);
     } catch (IOException e) {
       ss.span.setStatus(Status.INTERNAL.withDescription(e.toString()));
-      Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MWriteErrors, 1);
-      Observability.recordTaggedStat(Observability.KeyPhase, "write", Observability.MConnectionErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, command.toString()),
+            Observability.tagKeyPair(Observability.KeyPhase, "write"));
+
       throw new JedisConnectionException(e);
     } finally {
       ss.end();
@@ -133,26 +136,55 @@ public final class Protocol {
     // Maybe Read only first 5 bytes instead?
     if (message.startsWith(MOVED_PREFIX)) {
       String[] movedInfo = parseTargetHostAndSlot(message);
-      Observability.recordTaggedStat(Observability.KeyCommandName, "processError", Observability.MReadErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_moved_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisMovedDataException(message, new HostAndPort(movedInfo[1],
           Integer.parseInt(movedInfo[2])), Integer.parseInt(movedInfo[0]));
     } else if (message.startsWith(ASK_PREFIX)) {
       String[] askInfo = parseTargetHostAndSlot(message);
-      Observability.recordTaggedStat(Observability.KeyCommandName, "processError", Observability.MReadErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_ask_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisAskDataException(message, new HostAndPort(askInfo[1],
           Integer.parseInt(askInfo[2])), Integer.parseInt(askInfo[0]));
     } else if (message.startsWith(CLUSTERDOWN_PREFIX)) {
-      Observability.recordTaggedStat(Observability.KeyCommandName, "processError", Observability.MReadErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_clusterdown_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisClusterException(message);
     } else if (message.startsWith(BUSY_PREFIX)) {
-      Observability.recordTaggedStat(Observability.KeyCommandName, "processError", Observability.MReadErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_busy_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisBusyException(message);
     } else if (message.startsWith(NOSCRIPT_PREFIX) ) {
-      Observability.recordTaggedStat(Observability.KeyCommandName, "processError", Observability.MReadErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_noscript_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisNoScriptException(message);
     }
 
-    Observability.recordTaggedStat(Observability.KeyCommandName, "processError", Observability.MReadErrors, 1);
+    Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyPhase, "read"));
+
     throw new JedisDataException(message);
   }
 
@@ -189,7 +221,10 @@ public final class Protocol {
       processError(is);
       return null;
     } else {
-      Observability.recordTaggedStat(Observability.KeyCommandName, "process", Observability.MReadErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "process"));
+
       throw new JedisConnectionException("Unknown reply: " + (char) b);
     }
   }
@@ -223,8 +258,11 @@ public final class Protocol {
           if (size == -1) {
             String message = "It seems like server has closed the connection";
             ss.span.setStatus(Status.INTERNAL.withDescription(message));
-            Observability.recordTaggedStat(Observability.KeyCommandName, "processBulkReply", Observability.MReadErrors, 1);
-            Observability.recordTaggedStat(Observability.KeyPhase, "read", Observability.MConnectionErrors, 1);
+            Observability.recordStatWithTags(
+                Observability.MErrors, 1,
+                Observability.tagKeyPair(Observability.KeyCommandName, "processBulkReply"),
+                Observability.tagKeyPair(Observability.KeyPhase, "read"));
+
             throw new JedisConnectionException(message);
           }
           offset += size;
@@ -262,8 +300,12 @@ public final class Protocol {
       }
     }
 
-    if (nDataExceptions > 0)
-      Observability.recordTaggedStat(Observability.KeyCommandName, "processMultiBulkReply", Observability.MReadErrors, nDataExceptions);
+    if (nDataExceptions > 0) {
+      Observability.recordStatWithTags(
+            Observability.MErrors, nDataExceptions,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processMultiBulkReply"),
+            Observability.tagKeyPair(Observability.KeyPhase, "read"));
+    }
 
     return ret;
   }

@@ -227,12 +227,17 @@ public class Connection implements Closeable {
         outputStream = new RedisOutputStream(socket.getOutputStream());
         inputStream = new RedisInputStream(socket.getInputStream());
         Observability.recordStat(Observability.MConnectionsOpened, 1);
+        Observability.recordStat(Observability.MDials, 1);
         ss.span.addAnnotation("Created input and output streams");
     } catch (IOException ex) {
         broken = true;
         String message = String.format("Failed connecting to host " 
             + host + ":" + port, ex);
-        Observability.recordTaggedStat(Observability.KeyPhase, "connect", Observability.MConnectionErrors, 1);
+        Observability.recordStatWithTags(
+                Observability.MErrors, 1,
+                Observability.tagKeyPair(Observability.KeyCommandName, "connect"),
+                Observability.tagKeyPair(Observability.KeyPhase, "dial"));
+
         ss.span.setStatus(Status.INTERNAL.withDescription(message));
         throw new JedisConnectionException(message);
     } finally {
@@ -260,7 +265,11 @@ public class Connection implements Closeable {
       Observability.recordStat(Observability.MConnectionsClosed, 1);
     } catch (IOException ex) {
       broken = true;
-      Observability.recordTaggedStat(Observability.KeyPhase, "disconnect", Observability.MConnectionErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "disconnect"),
+            Observability.tagKeyPair(Observability.KeyPhase, "close"));
+
       throw new JedisConnectionException(ex);
     } finally {
       IOUtils.closeQuietly(socket);
@@ -344,7 +353,11 @@ public class Connection implements Closeable {
       outputStream.flush();
     } catch (IOException ex) {
       broken = true;
-      Observability.recordTaggedStat(Observability.KeyPhase, "flush", Observability.MConnectionErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "flush"),
+            Observability.tagKeyPair(Observability.KeyPhase, "flush"));
+
       throw new JedisConnectionException(ex);
     } finally {
       ss.end();
@@ -357,7 +370,11 @@ public class Connection implements Closeable {
     try {
       return Protocol.read(inputStream);
     } catch (JedisConnectionException exc) {
-      Observability.recordTaggedStat(Observability.KeyPhase, "readProtocolWithCheckingBroken", Observability.MConnectionErrors, 1);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "readProtocolWithCheckingBroken"),
+            Observability.tagKeyPair(Observability.KeyPhase, "read"));
+
       ss.span.setStatus(Status.INTERNAL.withDescription(exc.toString()));
       broken = true;
       throw exc;
@@ -387,8 +404,12 @@ public class Connection implements Closeable {
           }
         }
 
-        if (nDataExceptions > 0)
-          Observability.recordTaggedStat(Observability.KeyCommandName, "getMany", Observability.MReadErrors, nDataExceptions);
+        if (nDataExceptions > 0) {
+          Observability.recordStatWithTags(
+                Observability.MErrors, 1,
+                Observability.tagKeyPair(Observability.KeyCommandName, "getMany"),
+                Observability.tagKeyPair(Observability.KeyPhase, "read"));
+        }
 
        return responses;
     } finally {
