@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import redis.clients.jedis.Observability;
 import redis.clients.jedis.commands.ProtocolCommand;
 import redis.clients.jedis.exceptions.JedisAskDataException;
 import redis.clients.jedis.exceptions.JedisBusyException;
@@ -16,6 +17,10 @@ import redis.clients.jedis.exceptions.JedisNoScriptException;
 import redis.clients.jedis.util.RedisInputStream;
 import redis.clients.jedis.util.RedisOutputStream;
 import redis.clients.jedis.util.SafeEncoder;
+
+// Distributed tracing and monitoring
+import redis.clients.jedis.Observability.ScopedSpan;
+import io.opencensus.trace.Status;
 
 public final class Protocol {
 
@@ -90,6 +95,8 @@ public final class Protocol {
 
   private static void sendCommand(final RedisOutputStream os, final byte[] command,
       final byte[]... args) {
+    ScopedSpan ss = Observability.createScopedSpan("jedis.Protocol.sendCommand");
+
     try {
       os.write(ASTERISK_BYTE);
       os.writeIntCrLf(args.length + 1);
@@ -98,14 +105,28 @@ public final class Protocol {
       os.write(command);
       os.writeCrLf();
 
+      // For ease, only counting the bytes of the command
+      Long totalBytesWritten = new Long(command.length);
+
       for (final byte[] arg : args) {
         os.write(DOLLAR_BYTE);
         os.writeIntCrLf(arg.length);
         os.write(arg);
         os.writeCrLf();
+        totalBytesWritten += new Long(arg.length);
       }
+      Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MWrites, 1);
+      Observability.recordTaggedStat(Observability.KeyCommandName, command.toString(), Observability.MBytesWritten, totalBytesWritten);
     } catch (IOException e) {
+      ss.span.setStatus(Status.INTERNAL.withDescription(e.toString()));
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, command.toString()),
+            Observability.tagKeyPair(Observability.KeyPhase, "write"));
+
       throw new JedisConnectionException(e);
+    } finally {
+      ss.end();
     }
   }
 
@@ -115,19 +136,55 @@ public final class Protocol {
     // Maybe Read only first 5 bytes instead?
     if (message.startsWith(MOVED_PREFIX)) {
       String[] movedInfo = parseTargetHostAndSlot(message);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_moved_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisMovedDataException(message, new HostAndPort(movedInfo[1],
           Integer.parseInt(movedInfo[2])), Integer.parseInt(movedInfo[0]));
     } else if (message.startsWith(ASK_PREFIX)) {
       String[] askInfo = parseTargetHostAndSlot(message);
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_ask_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisAskDataException(message, new HostAndPort(askInfo[1],
           Integer.parseInt(askInfo[2])), Integer.parseInt(askInfo[0]));
     } else if (message.startsWith(CLUSTERDOWN_PREFIX)) {
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_clusterdown_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisClusterException(message);
     } else if (message.startsWith(BUSY_PREFIX)) {
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_busy_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisBusyException(message);
     } else if (message.startsWith(NOSCRIPT_PREFIX) ) {
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyEnum, "has_noscript_prefix"),
+            Observability.tagKeyPair(Observability.KeyPhase, "parse_target_host_and_slot"));
+
       throw new JedisNoScriptException(message);
     }
+
+    Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processError"),
+            Observability.tagKeyPair(Observability.KeyPhase, "read"));
+
     throw new JedisDataException(message);
   }
 
@@ -151,7 +208,6 @@ public final class Protocol {
   }
 
   private static Object process(final RedisInputStream is) {
-
     final byte b = is.readByte();
     if (b == PLUS_BYTE) {
       return processStatusCodeReply(is);
@@ -165,34 +221,63 @@ public final class Protocol {
       processError(is);
       return null;
     } else {
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "process"));
+
       throw new JedisConnectionException("Unknown reply: " + (char) b);
     }
   }
 
   private static byte[] processStatusCodeReply(final RedisInputStream is) {
-    return is.readLineBytes();
+    ScopedSpan ss = Observability.createScopedSpan("jedis.Protocol.processStatusCodeReply");
+
+    try {
+        byte[] line = is.readLineBytes();
+        Observability.recordStat(Observability.MReads, 1);
+        Observability.recordStat(Observability.MBytesRead, line.length);
+        return line;
+    } finally {
+        ss.end();
+    }
   }
 
   private static byte[] processBulkReply(final RedisInputStream is) {
-    final int len = is.readIntCrLf();
-    if (len == -1) {
-      return null;
+    ScopedSpan ss = Observability.createScopedSpan("jedis.Protocol.processBulkReply");
+
+    try {
+        final int len = is.readIntCrLf();
+        if (len == -1) {
+          return null;
+        }
+
+        final byte[] read = new byte[len];
+        int offset = 0;
+        while (offset < len) {
+          final int size = is.read(read, offset, (len - offset));
+          if (size == -1) {
+            String message = "It seems like server has closed the connection";
+            ss.span.setStatus(Status.INTERNAL.withDescription(message));
+            Observability.recordStatWithTags(
+                Observability.MErrors, 1,
+                Observability.tagKeyPair(Observability.KeyCommandName, "processBulkReply"),
+                Observability.tagKeyPair(Observability.KeyPhase, "read"));
+
+            throw new JedisConnectionException(message);
+          }
+          offset += size;
+        }
+
+        // read 2 more bytes for the command delimiter
+        is.readByte();
+        is.readByte();
+
+        Observability.recordStat(Observability.MReads, 1);
+        Observability.recordStat(Observability.MBytesRead, read.length + 2);
+        return read;
+    } finally {
+        ss.end();
     }
-
-    final byte[] read = new byte[len];
-    int offset = 0;
-    while (offset < len) {
-      final int size = is.read(read, offset, (len - offset));
-      if (size == -1) throw new JedisConnectionException(
-          "It seems like server has closed the connection.");
-      offset += size;
-    }
-
-    // read 2 more bytes for the command delimiter
-    is.readByte();
-    is.readByte();
-
-    return read;
   }
 
   private static Long processInteger(final RedisInputStream is) {
@@ -204,14 +289,24 @@ public final class Protocol {
     if (num == -1) {
       return null;
     }
+    long nDataExceptions = 0;
     final List<Object> ret = new ArrayList<Object>(num);
     for (int i = 0; i < num; i++) {
       try {
         ret.add(process(is));
       } catch (JedisDataException e) {
+        nDataExceptions += 1;
         ret.add(e);
       }
     }
+
+    if (nDataExceptions > 0) {
+      Observability.recordStatWithTags(
+            Observability.MErrors, nDataExceptions,
+            Observability.tagKeyPair(Observability.KeyCommandName, "processMultiBulkReply"),
+            Observability.tagKeyPair(Observability.KeyPhase, "read"));
+    }
+
     return ret;
   }
 

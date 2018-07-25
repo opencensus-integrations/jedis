@@ -21,6 +21,11 @@ import redis.clients.jedis.util.RedisInputStream;
 import redis.clients.jedis.util.RedisOutputStream;
 import redis.clients.jedis.util.SafeEncoder;
 
+// Distributed tracing and monitoring
+import redis.clients.jedis.Observability;
+import redis.clients.jedis.Observability.ScopedSpan;
+import io.opencensus.trace.Status;
+
 public class Connection implements Closeable {
 
   private static final byte[][] EMPTY_ARGS = new byte[0][];
@@ -121,6 +126,8 @@ public class Connection implements Closeable {
   }
 
   public void sendCommand(final ProtocolCommand cmd, final byte[]... args) {
+    ScopedSpan ss = Observability.createScopedSpan("redis.Connection.connect");
+
     try {
       connect();
       Protocol.sendCommand(outputStream, cmd, args);
@@ -143,7 +150,10 @@ public class Connection implements Closeable {
       }
       // Any other exceptions related to connection?
       broken = true;
+      ss.span.setStatus(Status.INTERNAL.withDescription(ex.toString()));
       throw ex;
+    } finally {
+      ss.end();
     }
   }
 
@@ -164,8 +174,15 @@ public class Connection implements Closeable {
   }
 
   public void connect() {
-    if (!isConnected()) {
-      try {
+    if (isConnected()) {
+      Observability.recordStat(Observability.MConnectionsReused, 1);
+      return;
+    }
+
+    ScopedSpan ss = Observability.createScopedSpan("redis.Connection.connect");
+    long startDialTimeNs = System.nanoTime();
+
+    try {
         socket = new Socket();
         // ->@wjw_add
         socket.setReuseAddress(true);
@@ -178,8 +195,17 @@ public class Connection implements Closeable {
         // immediately
         // <-@wjw_add
 
+        Observability.annotateSpan(ss.span, "Connecting", 
+                Observability.createAttribute("connection_timeout", connectionTimeout),
+                Observability.createAttribute("keep_alive", true),
+                Observability.createAttribute("no_tcp_delay", true),
+                Observability.createAttribute("reuse_address", true),
+                Observability.createAttribute("so_timeout", soTimeout),
+                Observability.createAttribute("ssl", ssl));
+
         socket.connect(new InetSocketAddress(host, port), connectionTimeout);
         socket.setSoTimeout(soTimeout);
+        ss.span.addAnnotation("Connected");
 
         if (ssl) {
           if (null == sslSocketFactory) {
@@ -193,17 +219,32 @@ public class Connection implements Closeable {
               (!hostnameVerifier.verify(host, ((SSLSocket) socket).getSession()))) {
             String message = String.format(
                 "The connection to '%s' failed ssl/tls hostname verification.", host);
+            ss.span.setStatus(Status.INTERNAL.withDescription(message));
             throw new JedisConnectionException(message);
           }
         }
 
         outputStream = new RedisOutputStream(socket.getOutputStream());
         inputStream = new RedisInputStream(socket.getInputStream());
-      } catch (IOException ex) {
+        Observability.recordStat(Observability.MConnectionsOpened, 1);
+        Observability.recordStat(Observability.MDials, 1);
+        ss.span.addAnnotation("Created input and output streams");
+    } catch (IOException ex) {
         broken = true;
-        throw new JedisConnectionException("Failed connecting to host " 
+        String message = String.format("Failed connecting to host " 
             + host + ":" + port, ex);
-      }
+        Observability.recordStatWithTags(
+                Observability.MErrors, 1,
+                Observability.tagKeyPair(Observability.KeyCommandName, "connect"),
+                Observability.tagKeyPair(Observability.KeyPhase, "dial"));
+
+        ss.span.setStatus(Status.INTERNAL.withDescription(message));
+        throw new JedisConnectionException(message);
+    } finally {
+        long totalDialTimeNs = System.nanoTime() - startDialTimeNs;
+        double timeSpentMilliseconds = (new Double(totalDialTimeNs))/1e6;
+        Observability.recordStat(Observability.MDialLatencyMilliseconds, timeSpentMilliseconds);
+        ss.close();
     }
   }
 
@@ -213,16 +254,26 @@ public class Connection implements Closeable {
   }
 
   public void disconnect() {
-    if (isConnected()) {
-      try {
-        outputStream.flush();
-        socket.close();
-      } catch (IOException ex) {
-        broken = true;
-        throw new JedisConnectionException(ex);
-      } finally {
-        IOUtils.closeQuietly(socket);
-      }
+    if (!isConnected())
+        return;
+
+    ScopedSpan ss = Observability.createScopedSpan("redis.Connection.disconnect");
+
+    try {
+      outputStream.flush();
+      socket.close();
+      Observability.recordStat(Observability.MConnectionsClosed, 1);
+    } catch (IOException ex) {
+      broken = true;
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "disconnect"),
+            Observability.tagKeyPair(Observability.KeyPhase, "close"));
+
+      throw new JedisConnectionException(ex);
+    } finally {
+      IOUtils.closeQuietly(socket);
+      ss.end();
     }
   }
 
@@ -296,33 +347,73 @@ public class Connection implements Closeable {
   }
 
   protected void flush() {
+    ScopedSpan ss = Observability.createScopedSpan("redis.Connection.flush");
+
     try {
       outputStream.flush();
     } catch (IOException ex) {
       broken = true;
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "flush"),
+            Observability.tagKeyPair(Observability.KeyPhase, "flush"));
+
       throw new JedisConnectionException(ex);
+    } finally {
+      ss.end();
     }
   }
 
   protected Object readProtocolWithCheckingBroken() {
+    ScopedSpan ss = Observability.createScopedSpan("redis.Connection.readProtocolWithCheckingBroken");
+
     try {
       return Protocol.read(inputStream);
     } catch (JedisConnectionException exc) {
+      Observability.recordStatWithTags(
+            Observability.MErrors, 1,
+            Observability.tagKeyPair(Observability.KeyCommandName, "readProtocolWithCheckingBroken"),
+            Observability.tagKeyPair(Observability.KeyPhase, "read"));
+
+      ss.span.setStatus(Status.INTERNAL.withDescription(exc.toString()));
       broken = true;
       throw exc;
+    } finally {
+      ss.end();
     }
   }
 
   public List<Object> getMany(final int count) {
-    flush();
-    final List<Object> responses = new ArrayList<Object>(count);
-    for (int i = 0; i < count; i++) {
-      try {
-        responses.add(readProtocolWithCheckingBroken());
-      } catch (JedisDataException e) {
-        responses.add(e);
-      }
+    ScopedSpan ss = Observability.createScopedSpan("redis.Connection.getMany");
+
+    try {
+        ss.span.addAnnotation("Invoking flush");
+        flush();
+        ss.span.addAnnotation("Flushed");
+        Observability.annotateSpan(ss.span, "Getting responses back",
+                                                Observability.createAttribute("count", count));
+
+        long nDataExceptions = 0;
+        final List<Object> responses = new ArrayList<Object>(count);
+        for (int i = 0; i < count; i++) {
+          try {
+            responses.add(readProtocolWithCheckingBroken());
+          } catch (JedisDataException e) {
+            nDataExceptions += 1;
+            responses.add(e);
+          }
+        }
+
+        if (nDataExceptions > 0) {
+          Observability.recordStatWithTags(
+                Observability.MErrors, 1,
+                Observability.tagKeyPair(Observability.KeyCommandName, "getMany"),
+                Observability.tagKeyPair(Observability.KeyPhase, "read"));
+        }
+
+       return responses;
+    } finally {
+        ss.end();
     }
-    return responses;
   }
 }

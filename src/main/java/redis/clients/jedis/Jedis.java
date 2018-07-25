@@ -28,6 +28,10 @@ import redis.clients.jedis.params.ZIncrByParams;
 import redis.clients.jedis.util.SafeEncoder;
 import redis.clients.jedis.util.Slowlog;
 
+// Distributed tracing and monitoring
+import redis.clients.jedis.Observability;
+import redis.clients.jedis.Observability.RoundtripTrackingSpan;
+
 public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommands,
     AdvancedJedisCommands, ScriptingCommands, BasicCommands, ClusterCommands, SentinelCommands, ModuleCommands {
 
@@ -127,9 +131,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    * @return message
    */
   public String ping(final String message) {
-    checkIsInMultiOrPipeline();
-    client.sendCommand(Protocol.Command.PING, message);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.ping", "ping");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sendCommand(Protocol.Command.PING, message);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -143,9 +153,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String set(final String key, final String value) {
-    checkIsInMultiOrPipeline();
-    client.set(key, value);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.set", "set");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.set(key, value);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -159,9 +175,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String set(final String key, final String value, final SetParams params) {
-    checkIsInMultiOrPipeline();
-    client.set(key, value, params);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.set", "set");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.set(key, value, params);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -174,9 +196,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String get(final String key) {
-    checkIsInMultiOrPipeline();
-    client.sendCommand(Protocol.Command.GET, key);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.get", "get");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sendCommand(Protocol.Command.GET, key);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -188,9 +216,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long exists(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.exists(keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.exists", "exists");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.exists(keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -202,9 +236,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Boolean exists(final String key) {
-    checkIsInMultiOrPipeline();
-    client.exists(key);
-    return client.getIntegerReply() == 1;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.exists", "exists");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.exists(key);
+      return client.getIntegerReply() == 1;
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -216,16 +256,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long del(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.del(keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.del", "del");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.del(keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long del(final String key) {
-    checkIsInMultiOrPipeline();
-    client.del(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.del", "del");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.del(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -243,15 +295,27 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long unlink(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.unlink(keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.unlink", "unlink");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.unlink(keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long unlink(final String key) {
-    client.unlink(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.unlink", "unlink");
+
+    try {
+      client.unlink(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -265,16 +329,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String type(final String key) {
-    checkIsInMultiOrPipeline();
-    client.type(key);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.type", "type");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.type(key);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Set<String> keys(final String pattern) {
-    checkIsInMultiOrPipeline();
-    client.keys(pattern);
-    return BuilderFactory.STRING_SET.build(client.getBinaryMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.keys", "keys");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.keys(pattern);
+      return BuilderFactory.STRING_SET.build(client.getBinaryMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -286,9 +362,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String randomKey() {
-    checkIsInMultiOrPipeline();
-    client.randomKey();
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.randomKey", "randomKey");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.randomKey();
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -302,9 +384,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String rename(final String oldkey, final String newkey) {
-    checkIsInMultiOrPipeline();
-    client.rename(oldkey, newkey);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.rename", "rename");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.rename(oldkey, newkey);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -317,9 +405,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long renamenx(final String oldkey, final String newkey) {
-    checkIsInMultiOrPipeline();
-    client.renamenx(oldkey, newkey);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.renamenx", "renamenx");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.renamenx(oldkey, newkey);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -345,9 +439,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long expire(final String key, final int seconds) {
-    checkIsInMultiOrPipeline();
-    client.expire(key, seconds);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.expire", "expire");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.expire(key, seconds);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -375,9 +475,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long expireAt(final String key, final long unixTime) {
-    checkIsInMultiOrPipeline();
-    client.expireAt(key, unixTime);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.expireAt", "expireAt");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.expireAt(key, unixTime);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -392,9 +498,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long ttl(final String key) {
-    checkIsInMultiOrPipeline();
-    client.ttl(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.ttl", "ttl");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.ttl(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -405,16 +517,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long touch(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.touch(keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.touch", "touch");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.touch(keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long touch(final String key) {
-    checkIsInMultiOrPipeline();
-    client.touch(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.touch", "touch");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.touch(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -429,9 +553,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long move(final String key, final int dbIndex) {
-    checkIsInMultiOrPipeline();
-    client.move(key, dbIndex);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.move", "move");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.move(key, dbIndex);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -446,9 +576,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String getSet(final String key, final String value) {
-    checkIsInMultiOrPipeline();
-    client.getSet(key, value);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.getSet", "getSet");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.getSet(key, value);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -462,9 +598,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> mget(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.mget(keys);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.mget", "mget");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.mget(keys);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -478,9 +620,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long setnx(final String key, final String value) {
-    checkIsInMultiOrPipeline();
-    client.setnx(key, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.setnx", "setnx");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.setnx(key, value);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -496,9 +644,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String setex(final String key, final int seconds, final String value) {
-    checkIsInMultiOrPipeline();
-    client.setex(key, seconds, value);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.setex", "setex");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.setex(key, seconds, value);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -519,9 +673,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String mset(final String... keysvalues) {
-    checkIsInMultiOrPipeline();
-    client.mset(keysvalues);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.mset", "mset");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.mset(keysvalues);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -543,9 +703,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long msetnx(final String... keysvalues) {
-    checkIsInMultiOrPipeline();
-    client.msetnx(keysvalues);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.msetnx", "msetnx");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.msetnx(keysvalues);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -568,9 +734,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long decrBy(final String key, final long decrement) {
-    checkIsInMultiOrPipeline();
-    client.decrBy(key, decrement);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.decrBy", "decrBy");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.decrBy(key, decrement);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -592,9 +764,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long decr(final String key) {
-    checkIsInMultiOrPipeline();
-    client.decr(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.decr", "decr");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.decr(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -617,9 +795,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long incrBy(final String key, final long increment) {
-    checkIsInMultiOrPipeline();
-    client.incrBy(key, increment);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.incrBy", "incrBy");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.incrBy(key, increment);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -639,10 +823,16 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Double incrByFloat(final String key, final double increment) {
-    checkIsInMultiOrPipeline();
-    client.incrByFloat(key, increment);
-    String dval = client.getBulkReply();
-    return (dval != null ? new Double(dval) : null);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.incrByFloat", "incrByFloat");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.incrByFloat(key, increment);
+      String dval = client.getBulkReply();
+      return (dval != null ? new Double(dval) : null);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -664,9 +854,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long incr(final String key) {
-    checkIsInMultiOrPipeline();
-    client.incr(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.incr", "incr");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.incr(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -683,9 +879,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long append(final String key, final String value) {
-    checkIsInMultiOrPipeline();
-    client.append(key, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.append", "append");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.append(key, value);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -706,9 +908,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String substr(final String key, final int start, final int end) {
-    checkIsInMultiOrPipeline();
-    client.substr(key, start, end);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.substr", "substr");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.substr(key, start, end);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -725,16 +933,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long hset(final String key, final String field, final String value) {
-    checkIsInMultiOrPipeline();
-    client.hset(key, field, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hset", "hset");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hset(key, field, value);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long hset(final String key, final Map<String, String> hash) {
-    checkIsInMultiOrPipeline();
-    client.hset(key, hash);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hset", "hset");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hset(key, hash);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -749,9 +969,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String hget(final String key, final String field) {
-    checkIsInMultiOrPipeline();
-    client.hget(key, field);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hget", "hget");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hget(key, field);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -765,9 +991,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long hsetnx(final String key, final String field, final String value) {
-    checkIsInMultiOrPipeline();
-    client.hsetnx(key, field, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hsetnx", "hsetnx");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hsetnx(key, field, value);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -782,9 +1014,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String hmset(final String key, final Map<String, String> hash) {
-    checkIsInMultiOrPipeline();
-    client.hmset(key, hash);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hmset", "hmset");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hmset(key, hash);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -801,9 +1039,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> hmget(final String key, final String... fields) {
-    checkIsInMultiOrPipeline();
-    client.hmget(key, fields);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hmget", "hmget");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hmget(key, fields);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -822,9 +1066,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long hincrBy(final String key, final String field, final long value) {
-    checkIsInMultiOrPipeline();
-    client.hincrBy(key, field, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hincrBy", "hincrBy");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hincrBy(key, field, value);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -845,10 +1095,16 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Double hincrByFloat(final String key, final String field, final double value) {
-    checkIsInMultiOrPipeline();
-    client.hincrByFloat(key, field, value);
-    final String dval = client.getBulkReply();
-    return (dval != null ? new Double(dval) : null);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hincrByFloat", "hincrByFloat");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hincrByFloat(key, field, value);
+      final String dval = client.getBulkReply();
+      return (dval != null ? new Double(dval) : null);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -860,9 +1116,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Boolean hexists(final String key, final String field) {
-    checkIsInMultiOrPipeline();
-    client.hexists(key, field);
-    return client.getIntegerReply() == 1;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hexists", "hexists");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hexists(key, field);
+      return client.getIntegerReply() == 1;
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -876,9 +1138,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long hdel(final String key, final String... fields) {
-    checkIsInMultiOrPipeline();
-    client.hdel(key, fields);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hdel", "hdel");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hdel(key, fields);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -891,9 +1159,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long hlen(final String key) {
-    checkIsInMultiOrPipeline();
-    client.hlen(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hlen", "hlen");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hlen(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -905,9 +1179,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<String> hkeys(final String key) {
-    checkIsInMultiOrPipeline();
-    client.hkeys(key);
-    return BuilderFactory.STRING_SET.build(client.getBinaryMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hkeys", "hkeys");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hkeys(key);
+      return BuilderFactory.STRING_SET.build(client.getBinaryMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -919,10 +1199,16 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> hvals(final String key) {
-    checkIsInMultiOrPipeline();
-    client.hvals(key);
-    final List<String> lresult = client.getMultiBulkReply();
-    return lresult;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hvals", "hvals");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hvals(key);
+      final List<String> lresult = client.getMultiBulkReply();
+      return lresult;
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -934,9 +1220,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Map<String, String> hgetAll(final String key) {
-    checkIsInMultiOrPipeline();
-    client.hgetAll(key);
-    return BuilderFactory.STRING_MAP.build(client.getBinaryMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hgetAll", "hgetAll");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hgetAll(key);
+      return BuilderFactory.STRING_MAP.build(client.getBinaryMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -952,9 +1244,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long rpush(final String key, final String... strings) {
-    checkIsInMultiOrPipeline();
-    client.rpush(key, strings);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.rpush", "rpush");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.rpush(key, strings);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -970,9 +1268,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long lpush(final String key, final String... strings) {
-    checkIsInMultiOrPipeline();
-    client.lpush(key, strings);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lpush", "lpush");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.lpush(key, strings);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -986,9 +1290,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long llen(final String key) {
-    checkIsInMultiOrPipeline();
-    client.llen(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.llen", "llen");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.llen(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1025,9 +1335,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> lrange(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.lrange(key, start, stop);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lrange", "lrange");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.lrange(key, start, stop);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1062,9 +1378,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String ltrim(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.ltrim(key, start, stop);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.ltrim", "ltrim");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.ltrim(key, start, stop);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1085,9 +1407,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String lindex(final String key, final long index) {
-    checkIsInMultiOrPipeline();
-    client.lindex(key, index);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lindex", "lindex");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.lindex(key, index);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1111,9 +1439,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String lset(final String key, final long index, final String value) {
-    checkIsInMultiOrPipeline();
-    client.lset(key, index, value);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lset", "lset");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.lset(key, index, value);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1133,9 +1467,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long lrem(final String key, final long count, final String value) {
-    checkIsInMultiOrPipeline();
-    client.lrem(key, count, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lrem", "lrem");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.lrem(key, count, value);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1150,9 +1490,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String lpop(final String key) {
-    checkIsInMultiOrPipeline();
-    client.lpop(key);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lpop", "lpop");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.lpop(key);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1167,9 +1513,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String rpop(final String key) {
-    checkIsInMultiOrPipeline();
-    client.rpop(key);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.rpop", "rpop");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.rpop(key);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1189,9 +1541,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String rpoplpush(final String srckey, final String dstkey) {
-    checkIsInMultiOrPipeline();
-    client.rpoplpush(srckey, dstkey);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.rpoplpush", "rpoplpush");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.rpoplpush(srckey, dstkey);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1207,9 +1565,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sadd(final String key, final String... members) {
-    checkIsInMultiOrPipeline();
-    client.sadd(key, members);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sadd", "sadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sadd(key, members);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1222,10 +1586,16 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<String> smembers(final String key) {
-    checkIsInMultiOrPipeline();
-    client.smembers(key);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.smembers", "smembers");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.smembers(key);
+      final List<String> members = client.getMultiBulkReply();
+      return SetFromList.of(members);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1240,9 +1610,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long srem(final String key, final String... members) {
-    checkIsInMultiOrPipeline();
-    client.srem(key, members);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.srem", "srem");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.srem(key, members);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1258,17 +1634,29 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String spop(final String key) {
-    checkIsInMultiOrPipeline();
-    client.spop(key);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.spop", "spop");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.spop(key);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Set<String> spop(final String key, final long count) {
-    checkIsInMultiOrPipeline();
-    client.spop(key, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.spop", "spop");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.spop(key, count);
+      final List<String> members = client.getMultiBulkReply();
+      return SetFromList.of(members);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1292,9 +1680,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long smove(final String srckey, final String dstkey, final String member) {
-    checkIsInMultiOrPipeline();
-    client.smove(srckey, dstkey, member);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.smove", "smove");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.smove(srckey, dstkey, member);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1306,9 +1700,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long scard(final String key) {
-    checkIsInMultiOrPipeline();
-    client.scard(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.scard", "scard");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.scard(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1322,9 +1722,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Boolean sismember(final String key, final String member) {
-    checkIsInMultiOrPipeline();
-    client.sismember(key, member);
-    return client.getIntegerReply() == 1;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sismember", "sismember");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sismember(key, member);
+      return client.getIntegerReply() == 1;
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1344,10 +1750,16 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<String> sinter(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.sinter(keys);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sinter", "sinter");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sinter(keys);
+      final List<String> members = client.getMultiBulkReply();
+      return SetFromList.of(members);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1362,9 +1774,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sinterstore(final String dstkey, final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.sinterstore(dstkey, keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sinterstore", "sinterstore");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sinterstore(dstkey, keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1381,10 +1799,16 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<String> sunion(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.sunion(keys);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sunion", "sunion");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sunion(keys);
+      final List<String> members = client.getMultiBulkReply();
+      return SetFromList.of(members);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1398,9 +1822,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sunionstore(final String dstkey, final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.sunionstore(dstkey, keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sunionstore", "sunionstore");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sunionstore(dstkey, keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1426,9 +1856,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<String> sdiff(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.sdiff(keys);
-    return BuilderFactory.STRING_SET.build(client.getBinaryMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sdiff", "sdiff");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sdiff(keys);
+      return BuilderFactory.STRING_SET.build(client.getBinaryMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1440,9 +1876,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sdiffstore(final String dstkey, final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.sdiffstore(dstkey, keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sdiffstore", "sdiffstore");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.sdiffstore(dstkey, keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1457,16 +1899,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String srandmember(final String key) {
-    checkIsInMultiOrPipeline();
-    client.srandmember(key);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.srandmember", "srandmember");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.srandmember(key);
+      return client.getBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<String> srandmember(final String key, final int count) {
-    checkIsInMultiOrPipeline();
-    client.srandmember(key, count);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.srandmember", "srandmember");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.srandmember(key, count);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1487,39 +1941,69 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zadd(final String key, final double score, final String member) {
-    checkIsInMultiOrPipeline();
-    client.zadd(key, score, member);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zadd", "zadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zadd(key, score, member);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long zadd(final String key, final double score, final String member,
       final ZAddParams params) {
-    checkIsInMultiOrPipeline();
-    client.zadd(key, score, member, params);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zadd", "zadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zadd(key, score, member, params);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long zadd(final String key, final Map<String, Double> scoreMembers) {
-    checkIsInMultiOrPipeline();
-    client.zadd(key, scoreMembers);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zadd", "zadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zadd(key, scoreMembers);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long zadd(final String key, final Map<String, Double> scoreMembers, final ZAddParams params) {
-    checkIsInMultiOrPipeline();
-    client.zadd(key, scoreMembers, params);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zadd", "zadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zadd(key, scoreMembers, params);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Set<String> zrange(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.zrange(key, start, stop);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrange", "zrange");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zrange(key, start, stop);
+      final List<String> members = client.getMultiBulkReply();
+      return SetFromList.of(members);
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1535,9 +2019,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zrem(final String key, final String... members) {
-    checkIsInMultiOrPipeline();
-    client.zrem(key, members);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrem", "zrem");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zrem(key, members);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1560,16 +2050,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Double zincrby(final String key, final double increment, final String member) {
-    checkIsInMultiOrPipeline();
-    client.zincrby(key, increment, member);
-    return BuilderFactory.DOUBLE.build(client.getOne());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zincrby", "zincrby");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zincrby(key, increment, member);
+      return BuilderFactory.DOUBLE.build(client.getOne());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Double zincrby(final String key, final double increment, final String member, final ZIncrByParams params) {
-    checkIsInMultiOrPipeline();
-    client.zincrby(key, increment, member, params);
-    return BuilderFactory.DOUBLE.build(client.getOne());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zincrby", "zincrby");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zincrby(key, increment, member, params);
+      return BuilderFactory.DOUBLE.build(client.getOne());
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1590,9 +2092,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zrank(final String key, final String member) {
-    checkIsInMultiOrPipeline();
-    client.zrank(key, member);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrank", "zrank");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zrank(key, member);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   /**
@@ -1613,31 +2121,55 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zrevrank(final String key, final String member) {
-    checkIsInMultiOrPipeline();
-    client.zrevrank(key, member);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrank", "zrevrank");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.zrevrank(key, member);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrange(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.zrevrange(key, start, stop);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrange", "zrevrange");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrange(key, start, stop);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrangeWithScores(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.zrangeWithScores(key, start, stop);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeWithScores", "zrangeWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeWithScores(key, start, stop);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrevrangeWithScores(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeWithScores(key, start, stop);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeWithScores", "zrangeWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeWithScores(key, start, stop);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1650,9 +2182,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zcard(final String key) {
-    checkIsInMultiOrPipeline();
-    client.zcard(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zcard", "zcard");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zcard(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1667,15 +2205,27 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Double zscore(final String key, final String member) {
-    checkIsInMultiOrPipeline();
-    client.zscore(key, member);
-    return BuilderFactory.DOUBLE.build(client.getOne());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zscore", "zscore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zscore(key, member);
+        return BuilderFactory.DOUBLE.build(client.getOne());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String watch(final String... keys) {
-    client.watch(keys);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.watch", "watch");
+
+    try {
+        client.watch(keys);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1693,9 +2243,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> sort(final String key) {
-    checkIsInMultiOrPipeline();
-    client.sort(key);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sort", "sort");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.sort(key);
+        return client.getMultiBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1774,9 +2330,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> sort(final String key, final SortingParams sortingParameters) {
-    checkIsInMultiOrPipeline();
-    client.sort(key, sortingParameters);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sort", "sort");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.sort(key, sortingParameters);
+        return client.getMultiBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1843,7 +2405,13 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> blpop(final int timeout, final String... keys) {
-    return blpop(getArgsAddTimeout(timeout, keys));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.blpop", "blpop");
+
+    try {
+        return blpop(getArgsAddTimeout(timeout, keys));
+    } finally {
+        span.end();
+    }
   }
 
   private String[] getArgsAddTimeout(int timeout, String[] keys) {
@@ -1859,6 +2427,8 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public List<String> blpop(final String... args) {
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.blpop", "blpop");
+
     checkIsInMultiOrPipeline();
     client.blpop(args);
     client.setTimeoutInfinite();
@@ -1866,11 +2436,14 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
       return client.getMultiBulkReply();
     } finally {
       client.rollbackTimeout();
+      span.end();
     }
   }
 
   @Override
   public List<String> brpop(final String... args) {
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.brpop", "brpop");
+
     checkIsInMultiOrPipeline();
     client.brpop(args);
     client.setTimeoutInfinite();
@@ -1878,6 +2451,7 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
       return client.getMultiBulkReply();
     } finally {
       client.rollbackTimeout();
+      span.end();
     }
   }
 
@@ -1893,9 +2467,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sort(final String key, final SortingParams sortingParameters, final String dstkey) {
-    checkIsInMultiOrPipeline();
-    client.sort(key, sortingParameters, dstkey);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sort", "sort");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.sort(key, sortingParameters, dstkey);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1913,9 +2493,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sort(final String key, final String dstkey) {
-    checkIsInMultiOrPipeline();
-    client.sort(key, dstkey);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sort", "sort");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.sort(key, dstkey);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -1982,21 +2568,39 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> brpop(final int timeout, final String... keys) {
-    return brpop(getArgsAddTimeout(timeout, keys));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.brpop", "brpop");
+
+    try {
+        return brpop(getArgsAddTimeout(timeout, keys));
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long zcount(final String key, final double min, final double max) {
-    checkIsInMultiOrPipeline();
-    client.zcount(key, min, max);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zcount", "zcount");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zcount(key, min, max);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long zcount(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zcount(key, min, max);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zcount", "zcount");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zcount(key, min, max);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2049,18 +2653,30 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<String> zrangeByScore(final String key, final double min, final double max) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScore(key, min, max);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScore", "zrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScore(key, min, max);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrangeByScore(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScore(key, min, max);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScore", "zrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScore(key, min, max);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2113,19 +2729,31 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
   @Override
   public Set<String> zrangeByScore(final String key, final double min, final double max,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScore(key, min, max, offset, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScore", "zrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScore(key, min, max, offset, count);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrangeByScore(final String key, final String min, final String max,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScore(key, min, max, offset, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScore", "zrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScore(key, min, max, offset, count);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2177,16 +2805,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Set<Tuple> zrangeByScoreWithScores(final String key, final double min, final double max) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScoreWithScores(key, min, max);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScoreWithScores", "zrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScoreWithScores(key, min, max);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrangeByScoreWithScores(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScoreWithScores(key, min, max);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScoreWithScores", "zrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScoreWithScores(key, min, max);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2239,81 +2879,141 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
   @Override
   public Set<Tuple> zrangeByScoreWithScores(final String key, final double min, final double max,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScoreWithScores(key, min, max, offset, count);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScoreWithScores", "zrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScoreWithScores(key, min, max, offset, count);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrangeByScoreWithScores(final String key, final String min, final String max,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByScoreWithScores(key, min, max, offset, count);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByScoreWithScores", "zrevrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByScoreWithScores(key, min, max, offset, count);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrangeByScore(final String key, final double max, final double min) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScore(key, max, min);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScore", "zrevrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScore(key, max, min);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrangeByScore(final String key, final String max, final String min) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScore(key, max, min);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScore", "zrevrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScore(key, max, min);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrangeByScore(final String key, final double max, final double min,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScore(key, max, min, offset, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScore", "zrevrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScore(key, max, min, offset, count);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrevrangeByScoreWithScores(final String key, final double max, final double min) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScoreWithScores(key, max, min);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScoreWithScores", "zrevrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScoreWithScores(key, max, min);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrevrangeByScoreWithScores(final String key, final double max,
       final double min, final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScoreWithScores(key, max, min, offset, count);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScoreWithScores", "zrevrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScoreWithScores(key, max, min, offset, count);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrevrangeByScoreWithScores(final String key, final String max,
       final String min, final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScoreWithScores(key, max, min, offset, count);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScoreWithScores", "zrevrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScoreWithScores(key, max, min, offset, count);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrangeByScore(final String key, final String max, final String min,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScore(key, max, min, offset, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScore", "zrevrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScore(key, max, min, offset, count);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<Tuple> zrevrangeByScoreWithScores(final String key, final String max, final String min) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByScoreWithScores(key, max, min);
-    return getTupledSet();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByScoreWithScores", "zrevrangeByScoreWithScores");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByScoreWithScores(key, max, min);
+        return getTupledSet();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2328,9 +3028,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zremrangeByRank(final String key, final long start, final long stop) {
-    checkIsInMultiOrPipeline();
-    client.zremrangeByRank(key, start, stop);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zremrangeByRank", "zremrangeByRank");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zremrangeByRank(key, start, stop);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2348,16 +3054,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zremrangeByScore(final String key, final double min, final double max) {
-    checkIsInMultiOrPipeline();
-    client.zremrangeByScore(key, min, max);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zremrangeByScore", "zremrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zremrangeByScore(key, min, max);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long zremrangeByScore(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zremrangeByScore(key, min, max);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zremrangeByScore", "zremrangeByScore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zremrangeByScore(key, min, max);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2392,9 +3110,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zunionstore(final String dstkey, final String... sets) {
-    checkIsInMultiOrPipeline();
-    client.zunionstore(dstkey, sets);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zunionstore", "zunionstore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zunionstore(dstkey, sets);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2430,9 +3154,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zunionstore(final String dstkey, final ZParams params, final String... sets) {
-    checkIsInMultiOrPipeline();
-    client.zunionstore(dstkey, params, sets);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zunionstore", "zunionstore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zunionstore(dstkey, params, sets);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2467,9 +3197,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zinterstore(final String dstkey, final String... sets) {
-    checkIsInMultiOrPipeline();
-    client.zinterstore(dstkey, sets);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zinterstore", "zinterstore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zinterstore(dstkey, sets);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2505,70 +3241,124 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long zinterstore(final String dstkey, final ZParams params, final String... sets) {
-    checkIsInMultiOrPipeline();
-    client.zinterstore(dstkey, params, sets);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zinterstore", "zinterstore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zinterstore(dstkey, params, sets);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long zlexcount(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zlexcount(key, min, max);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zlexcount", "zlexcount");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zlexcount(key, min, max);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrangeByLex(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByLex(key, min, max);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByLex", "zrangeByLex");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByLex(key, min, max);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrangeByLex(final String key, final String min, final String max,
       final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrangeByLex(key, min, max, offset, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrangeByLex", "zrangeByLex");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrangeByLex(key, min, max, offset, count);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrangeByLex(final String key, final String max, final String min) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByLex(key, max, min);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByLex", "zrevrangeByLex");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByLex(key, max, min);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Set<String> zrevrangeByLex(final String key, final String max, final String min, final int offset, final int count) {
-    checkIsInMultiOrPipeline();
-    client.zrevrangeByLex(key, max, min, offset, count);
-    final List<String> members = client.getMultiBulkReply();
-    return SetFromList.of(members);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zrevrangeByLex", "zrevrangeByLex");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zrevrangeByLex(key, max, min, offset, count);
+        final List<String> members = client.getMultiBulkReply();
+        return SetFromList.of(members);
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long zremrangeByLex(final String key, final String min, final String max) {
-    checkIsInMultiOrPipeline();
-    client.zremrangeByLex(key, min, max);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zremrangeByLex", "zremrangeByLex");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zremrangeByLex(key, min, max);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long strlen(final String key) {
-    checkIsInMultiOrPipeline();
-    client.strlen(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.strlen", "strlen");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.strlen(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long lpushx(final String key, final String... string) {
-    checkIsInMultiOrPipeline();
-    client.lpushx(key, string);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.lpushx", "lpushx");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.lpushx(key, string);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2581,30 +3371,54 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long persist(final String key) {
-    client.persist(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.persist", "persist");
+
+    try {
+        client.persist(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long rpushx(final String key, final String... string) {
-    checkIsInMultiOrPipeline();
-    client.rpushx(key, string);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.rpushx", "rpushx");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.rpushx(key, string);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String echo(final String string) {
-    checkIsInMultiOrPipeline();
-    client.echo(string);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.echo", "echo");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.echo(string);
+        return client.getBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long linsert(final String key, final ListPosition where, final String pivot,
       final String value) {
-    checkIsInMultiOrPipeline();
-    client.linsert(key, where, pivot, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.linsert", "linsert");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.linsert(key, where, pivot, value);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2616,12 +3430,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String brpoplpush(final String source, final String destination, final int timeout) {
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.brpoplpush", "brpoplpush");
+
     client.brpoplpush(source, destination, timeout);
     client.setTimeoutInfinite();
     try {
       return client.getBulkReply();
     } finally {
       client.rollbackTimeout();
+      span.end();
     }
   }
 
@@ -2634,16 +3451,28 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Boolean setbit(final String key, final long offset, final boolean value) {
-    checkIsInMultiOrPipeline();
-    client.setbit(key, offset, value);
-    return client.getIntegerReply() == 1;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.setbit", "setbit");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.setbit(key, offset, value);
+        return client.getIntegerReply() == 1;
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Boolean setbit(final String key, final long offset, final String value) {
-    checkIsInMultiOrPipeline();
-    client.setbit(key, offset, value);
-    return client.getIntegerReply() == 1;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.setbit", "setbit");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.setbit(key, offset, value);
+        return client.getIntegerReply() == 1;
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2654,23 +3483,41 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Boolean getbit(final String key, final long offset) {
-    checkIsInMultiOrPipeline();
-    client.getbit(key, offset);
-    return client.getIntegerReply() == 1;
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.getbit", "getbit");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.getbit(key, offset);
+        return client.getIntegerReply() == 1;
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long setrange(final String key, final long offset, final String value) {
-    checkIsInMultiOrPipeline();
-    client.setrange(key, offset, value);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.setrange", "setrange");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.setrange(key, offset, value);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String getrange(final String key, final long startOffset, final long endOffset) {
-    checkIsInMultiOrPipeline();
-    client.getrange(key, startOffset, endOffset);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.getrange", "getrange");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.getrange(key, startOffset, endOffset);
+        return client.getBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
@@ -2680,9 +3527,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public Long bitpos(final String key, final boolean value, final BitPosParams params) {
-    checkIsInMultiOrPipeline();
-    client.bitpos(key, value, params);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.bitpos", "bitpos");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.bitpos(key, value, params);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2721,8 +3574,14 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> configGet(final String pattern) {
-    client.configGet(pattern);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.configGet", "configSet");
+
+    try {
+        client.configGet(pattern);
+        return client.getMultiBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2756,47 +3615,68 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public String configSet(final String parameter, final String value) {
-    client.configSet(parameter, value);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.configSet", "configSet");
+
+    try {
+        client.configSet(parameter, value);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Object eval(final String script, final int keyCount, final String... params) {
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.eval", "eval");
+
     client.setTimeoutInfinite();
     try {
       client.eval(script, keyCount, params);
       return getEvalResult();
     } finally {
       client.rollbackTimeout();
+      span.end();
     }
   }
 
   @Override
   public void subscribe(final JedisPubSub jedisPubSub, final String... channels) {
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.subscribe", "subscribe");
+
     client.setTimeoutInfinite();
     try {
       jedisPubSub.proceed(client, channels);
     } finally {
       client.rollbackTimeout();
+      span.end();
     }
   }
 
   @Override
   public Long publish(final String channel, final String message) {
-    checkIsInMultiOrPipeline();
-    connect();
-    client.publish(channel, message);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.publish", "publish");
+
+    try {
+        checkIsInMultiOrPipeline();
+        connect();
+        client.publish(channel, message);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public void psubscribe(final JedisPubSub jedisPubSub, final String... patterns) {
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.psubscribe", "psubscribe");
+
     checkIsInMultiOrPipeline();
     client.setTimeoutInfinite();
     try {
       jedisPubSub.proceedWithPatterns(client, patterns);
     } finally {
       client.rollbackTimeout();
+      span.end();
     }
   }
 
@@ -2831,7 +3711,13 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
   }
 
   private Object getEvalResult() {
-    return evalResult(client.getOne());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.getEvalResult", "getEvalResult");
+
+    try {
+        return evalResult(client.getOne());
+    } finally {
+        span.end();
+    }
   }
 
   private Object evalResult(Object result) {
@@ -2857,9 +3743,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public Object evalsha(final String sha1, final int keyCount, final String... params) {
-    checkIsInMultiOrPipeline();
-    client.evalsha(sha1, keyCount, params);
-    return getEvalResult();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.evalsha", "evalsha");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.evalsha(sha1, keyCount, params);
+        return getEvalResult();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
@@ -2871,71 +3763,131 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public List<Boolean> scriptExists(final String... sha1) {
-    client.scriptExists(sha1);
-    List<Long> result = client.getIntegerMultiBulkReply();
-    List<Boolean> exists = new ArrayList<Boolean>();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.scriptExists", "scriptExists");
 
-    for (Long value : result)
-      exists.add(value == 1);
+    try {
+        client.scriptExists(sha1);
+        List<Long> result = client.getIntegerMultiBulkReply();
+        List<Boolean> exists = new ArrayList<Boolean>();
 
-    return exists;
+        for (Long value : result)
+            exists.add(value == 1);
+
+        return exists;
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String scriptLoad(final String script) {
-    client.scriptLoad(script);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.scriptLoad", "scriptLoad");
+
+    try {
+        client.scriptLoad(script);
+        return client.getBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public List<Slowlog> slowlogGet() {
-    client.slowlogGet();
-    return Slowlog.from(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.slowlogGet", "slowlogGet");
+
+    try {
+        client.slowlogGet();
+        return Slowlog.from(client.getObjectMultiBulkReply());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public List<Slowlog> slowlogGet(final long entries) {
-    client.slowlogGet(entries);
-    return Slowlog.from(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.slowlogGet", "slowlogGet");
+
+    try {
+        client.slowlogGet(entries);
+        return Slowlog.from(client.getObjectMultiBulkReply());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long objectRefcount(final String key) {
-    client.objectRefcount(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.objectRefcount", "objectRefcount");
+
+    try {
+        client.objectRefcount(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String objectEncoding(final String key) {
-    client.objectEncoding(key);
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.objectEncoding", "objectEncoding");
+
+    try {
+        client.objectEncoding(key);
+        return client.getBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long objectIdletime(final String key) {
-    client.objectIdletime(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.objectIdletime", "objectIdletime");
+
+    try {
+        client.objectIdletime(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long bitcount(final String key) {
-    checkIsInMultiOrPipeline();
-    client.bitcount(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.bitcount", "bitcount");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.bitcount(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long bitcount(final String key, final long start, final long end) {
-    checkIsInMultiOrPipeline();
-    client.bitcount(key, start, end);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.bitcount", "bitcount");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.bitcount(key, start, end);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long bitop(final BitOP op, final String destKey, final String... srcKeys) {
-    checkIsInMultiOrPipeline();
-    client.bitop(op, destKey, srcKeys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.bitpop", "bitpop");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.bitop(op, destKey, srcKeys);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -2972,14 +3924,20 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
   @Override
   @SuppressWarnings("rawtypes")
   public List<Map<String, String>> sentinelMasters() {
-    client.sentinel(Protocol.SENTINEL_MASTERS);
-    final List<Object> reply = client.getObjectMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelMasters", "sentinelMasters");
 
-    final List<Map<String, String>> masters = new ArrayList<Map<String, String>>();
-    for (Object obj : reply) {
-      masters.add(BuilderFactory.STRING_MAP.build((List) obj));
+    try {
+        client.sentinel(Protocol.SENTINEL_MASTERS);
+        final List<Object> reply = client.getObjectMultiBulkReply();
+
+        final List<Map<String, String>> masters = new ArrayList<Map<String, String>>();
+        for (Object obj : reply) {
+            masters.add(BuilderFactory.STRING_MAP.build((List) obj));
+        }
+        return masters;
+    } finally {
+        span.end();
     }
-    return masters;
   }
 
   /**
@@ -2993,9 +3951,15 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public List<String> sentinelGetMasterAddrByName(final String masterName) {
-    client.sentinel(Protocol.SENTINEL_GET_MASTER_ADDR_BY_NAME, masterName);
-    final List<Object> reply = client.getObjectMultiBulkReply();
-    return BuilderFactory.STRING_LIST.build(reply);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelGetMasterAddrByName", "sentinelGetMasterAddrByName");
+
+    try {
+        client.sentinel(Protocol.SENTINEL_GET_MASTER_ADDR_BY_NAME, masterName);
+        final List<Object> reply = client.getObjectMultiBulkReply();
+        return BuilderFactory.STRING_LIST.build(reply);
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -3008,8 +3972,14 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
    */
   @Override
   public Long sentinelReset(final String pattern) {
-    client.sentinel(Protocol.SENTINEL_RESET, pattern);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelReset", "sentinelReset");
+
+    try {
+        client.sentinel(Protocol.SENTINEL_RESET, pattern);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -3050,64 +4020,106 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
   @Override
   @SuppressWarnings("rawtypes")
   public List<Map<String, String>> sentinelSlaves(final String masterName) {
-    client.sentinel(Protocol.SENTINEL_SLAVES, masterName);
-    final List<Object> reply = client.getObjectMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelSlaves", "sentinelSlaves");
 
-    final List<Map<String, String>> slaves = new ArrayList<Map<String, String>>();
-    for (Object obj : reply) {
-      slaves.add(BuilderFactory.STRING_MAP.build((List) obj));
+    try {
+        client.sentinel(Protocol.SENTINEL_SLAVES, masterName);
+        final List<Object> reply = client.getObjectMultiBulkReply();
+
+        final List<Map<String, String>> slaves = new ArrayList<Map<String, String>>();
+        for (Object obj : reply) {
+            slaves.add(BuilderFactory.STRING_MAP.build((List) obj));
+        }
+        return slaves;
+    } finally {
+        span.end();
     }
-    return slaves;
   }
 
   @Override
   public String sentinelFailover(final String masterName) {
-    client.sentinel(Protocol.SENTINEL_FAILOVER, masterName);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelFailover", "sentinelFailover");
+
+    try {
+        client.sentinel(Protocol.SENTINEL_FAILOVER, masterName);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String sentinelMonitor(final String masterName, final String ip, final int port, final int quorum) {
-    client.sentinel(Protocol.SENTINEL_MONITOR, masterName, ip, String.valueOf(port),
-      String.valueOf(quorum));
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelMonitor", "sentinelMonitor");
+
+    try {
+        client.sentinel(Protocol.SENTINEL_MONITOR, masterName, ip, String.valueOf(port),
+            String.valueOf(quorum));
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String sentinelRemove(final String masterName) {
-    client.sentinel(Protocol.SENTINEL_REMOVE, masterName);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelRemove", "sentinelRemove");
+
+    try {
+        client.sentinel(Protocol.SENTINEL_REMOVE, masterName);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String sentinelSet(final String masterName, final Map<String, String> parameterMap) {
-    int index = 0;
-    int paramsLength = parameterMap.size() * 2 + 2;
-    String[] params = new String[paramsLength];
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sentinelSet", "sentinelSet");
 
-    params[index++] = Protocol.SENTINEL_SET;
-    params[index++] = masterName;
-    for (Entry<String, String> entry : parameterMap.entrySet()) {
-      params[index++] = entry.getKey();
-      params[index++] = entry.getValue();
+    try {
+        int index = 0;
+        int paramsLength = parameterMap.size() * 2 + 2;
+        String[] params = new String[paramsLength];
+
+        params[index++] = Protocol.SENTINEL_SET;
+        params[index++] = masterName;
+        for (Entry<String, String> entry : parameterMap.entrySet()) {
+            params[index++] = entry.getKey();
+            params[index++] = entry.getValue();
+        }
+
+        client.sentinel(params);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
     }
-
-    client.sentinel(params);
-    return client.getStatusCodeReply();
   }
 
   @Override
   public byte[] dump(final String key) {
-    checkIsInMultiOrPipeline();
-    client.dump(key);
-    return client.getBinaryBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.dump", "dump");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.dump(key);
+        return client.getBinaryBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String restore(final String key, final int ttl, final byte[] serializedValue) {
-    checkIsInMultiOrPipeline();
-    client.restore(key, ttl, serializedValue);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.restore", "restore");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.restore(key, ttl, serializedValue);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
@@ -3119,23 +4131,41 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public Long pexpire(final String key, final long milliseconds) {
-    checkIsInMultiOrPipeline();
-    client.pexpire(key, milliseconds);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pexpire", "pexire");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.pexpire(key, milliseconds);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long pexpireAt(final String key, final long millisecondsTimestamp) {
-    checkIsInMultiOrPipeline();
-    client.pexpireAt(key, millisecondsTimestamp);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pexpireAt", "pexireAt");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.pexpireAt(key, millisecondsTimestamp);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public Long pttl(final String key) {
-    checkIsInMultiOrPipeline();
-    client.pttl(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pttl", "pttl");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.pttl(key);
+        return client.getIntegerReply();
+    } finally {
+        span.end();
+    }
   }
 
   /**
@@ -3149,290 +4179,518 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public String psetex(final String key, final long milliseconds, final String value) {
-    checkIsInMultiOrPipeline();
-    client.psetex(key, milliseconds, value);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.psetex", "psetex");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.psetex(key, milliseconds, value);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   public String clientKill(final String client) {
-    checkIsInMultiOrPipeline();
-    this.client.clientKill(client);
-    return this.client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clientKill", "clientKill");
+
+    try {
+        checkIsInMultiOrPipeline();
+        this.client.clientKill(client);
+        return this.client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   public String clientSetname(final String name) {
-    checkIsInMultiOrPipeline();
-    client.clientSetname(name);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clientSetname", "clientSetname");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.clientSetname(name);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   public String migrate(final String host, final int port, final String key,
       final int destinationDb, final int timeout) {
-    checkIsInMultiOrPipeline();
-    client.migrate(host, port, key, destinationDb, timeout);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.migrate", "migrate");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.migrate(host, port, key, destinationDb, timeout);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public ScanResult<String> scan(final String cursor) {
-    return scan(cursor, new ScanParams());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.scan", "scan");
+
+    try {
+        return scan(cursor, new ScanParams());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public ScanResult<String> scan(final String cursor, final ScanParams params) {
-    checkIsInMultiOrPipeline();
-    client.scan(cursor, params);
-    List<Object> result = client.getObjectMultiBulkReply();
-    String newcursor = new String((byte[]) result.get(0));
-    List<String> results = new ArrayList<String>();
-    List<byte[]> rawResults = (List<byte[]>) result.get(1);
-    for (byte[] bs : rawResults) {
-      results.add(SafeEncoder.encode(bs));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.scan", "scan");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.scan(cursor, params);
+        List<Object> result = client.getObjectMultiBulkReply();
+        String newcursor = new String((byte[]) result.get(0));
+        List<String> results = new ArrayList<String>();
+        List<byte[]> rawResults = (List<byte[]>) result.get(1);
+        for (byte[] bs : rawResults) {
+            results.add(SafeEncoder.encode(bs));
+        }
+        return new ScanResult<String>(newcursor, results);
+    } finally {
+        span.end();
     }
-    return new ScanResult<String>(newcursor, results);
   }
 
   @Override
   public ScanResult<Map.Entry<String, String>> hscan(final String key, final String cursor) {
-    return hscan(key, cursor, new ScanParams());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hscan", "hscan");
+
+    try {
+        return hscan(key, cursor, new ScanParams());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public ScanResult<Map.Entry<String, String>> hscan(final String key, final String cursor,
       final ScanParams params) {
-    checkIsInMultiOrPipeline();
-    client.hscan(key, cursor, params);
-    List<Object> result = client.getObjectMultiBulkReply();
-    String newcursor = new String((byte[]) result.get(0));
-    List<Map.Entry<String, String>> results = new ArrayList<Map.Entry<String, String>>();
-    List<byte[]> rawResults = (List<byte[]>) result.get(1);
-    Iterator<byte[]> iterator = rawResults.iterator();
-    while (iterator.hasNext()) {
-      results.add(new AbstractMap.SimpleEntry<String, String>(SafeEncoder.encode(iterator.next()),
-          SafeEncoder.encode(iterator.next())));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hscan", "hscan");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.hscan(key, cursor, params);
+        List<Object> result = client.getObjectMultiBulkReply();
+        String newcursor = new String((byte[]) result.get(0));
+        List<Map.Entry<String, String>> results = new ArrayList<Map.Entry<String, String>>();
+        List<byte[]> rawResults = (List<byte[]>) result.get(1);
+        Iterator<byte[]> iterator = rawResults.iterator();
+        while (iterator.hasNext()) {
+            results.add(new AbstractMap.SimpleEntry<String, String>(SafeEncoder.encode(iterator.next()),
+                SafeEncoder.encode(iterator.next())));
+        }
+        return new ScanResult<Map.Entry<String, String>>(newcursor, results);
+    } finally {
+        span.end();
     }
-    return new ScanResult<Map.Entry<String, String>>(newcursor, results);
   }
 
   @Override
   public ScanResult<String> sscan(final String key, final String cursor) {
-    return sscan(key, cursor, new ScanParams());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sscan", "sscan");
+
+    try {
+        return sscan(key, cursor, new ScanParams());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public ScanResult<String> sscan(final String key, final String cursor, final ScanParams params) {
-    checkIsInMultiOrPipeline();
-    client.sscan(key, cursor, params);
-    List<Object> result = client.getObjectMultiBulkReply();
-    String newcursor = new String((byte[]) result.get(0));
-    List<String> results = new ArrayList<String>();
-    List<byte[]> rawResults = (List<byte[]>) result.get(1);
-    for (byte[] bs : rawResults) {
-      results.add(SafeEncoder.encode(bs));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.sscan", "sscan");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.sscan(key, cursor, params);
+        List<Object> result = client.getObjectMultiBulkReply();
+        String newcursor = new String((byte[]) result.get(0));
+        List<String> results = new ArrayList<String>();
+        List<byte[]> rawResults = (List<byte[]>) result.get(1);
+        for (byte[] bs : rawResults) {
+            results.add(SafeEncoder.encode(bs));
+        }
+        return new ScanResult<String>(newcursor, results);
+    } finally {
+        span.end();
     }
-    return new ScanResult<String>(newcursor, results);
   }
 
   @Override
   public ScanResult<Tuple> zscan(final String key, final String cursor) {
-    return zscan(key, cursor, new ScanParams());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zscan", "zscan");
+
+    try {
+        return zscan(key, cursor, new ScanParams());
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public ScanResult<Tuple> zscan(final String key, final String cursor, final ScanParams params) {
-    checkIsInMultiOrPipeline();
-    client.zscan(key, cursor, params);
-    List<Object> result = client.getObjectMultiBulkReply();
-    String newcursor = new String((byte[]) result.get(0));
-    List<Tuple> results = new ArrayList<Tuple>();
-    List<byte[]> rawResults = (List<byte[]>) result.get(1);
-    Iterator<byte[]> iterator = rawResults.iterator();
-    while (iterator.hasNext()) {
-      results.add(new Tuple(iterator.next(), BuilderFactory.DOUBLE.build(iterator.next())));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.zscan", "zscan");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.zscan(key, cursor, params);
+        List<Object> result = client.getObjectMultiBulkReply();
+        String newcursor = new String((byte[]) result.get(0));
+        List<Tuple> results = new ArrayList<Tuple>();
+        List<byte[]> rawResults = (List<byte[]>) result.get(1);
+        Iterator<byte[]> iterator = rawResults.iterator();
+        while (iterator.hasNext()) {
+            results.add(new Tuple(iterator.next(), BuilderFactory.DOUBLE.build(iterator.next())));
+        }
+        return new ScanResult<Tuple>(newcursor, results);
+    } finally {
+        span.end();
     }
-    return new ScanResult<Tuple>(newcursor, results);
   }
 
   @Override
   public String clusterNodes() {
-    checkIsInMultiOrPipeline();
-    client.clusterNodes();
-    return client.getBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterNodes", "clusterNodes");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.clusterNodes();
+        return client.getBulkReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String readonly() {
-    client.readonly();
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.readOnly", "readOnly");
+
+    try {
+        client.readonly();
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String clusterMeet(final String ip, final int port) {
-    checkIsInMultiOrPipeline();
-    client.clusterMeet(ip, port);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterMeet", "clusterMeet");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.clusterMeet(ip, port);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String clusterReset(final ClusterReset resetType) {
-    checkIsInMultiOrPipeline();
-    client.clusterReset(resetType);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterReset", "clusterReset");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.clusterReset(resetType);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String clusterAddSlots(final int... slots) {
-    checkIsInMultiOrPipeline();
-    client.clusterAddSlots(slots);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterAddSlots", "clusterAddSlots");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.clusterAddSlots(slots);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String clusterDelSlots(final int... slots) {
-    checkIsInMultiOrPipeline();
-    client.clusterDelSlots(slots);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterDelSlots", "clusterDelSlots");
+
+    try {
+        checkIsInMultiOrPipeline();
+        client.clusterDelSlots(slots);
+        return client.getStatusCodeReply();
+    } finally {
+        span.end();
+    }
   }
 
   @Override
   public String clusterInfo() {
-    checkIsInMultiOrPipeline();
-    client.clusterInfo();
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterInfo", "clusterInfo");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterInfo();
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<String> clusterGetKeysInSlot(final int slot, final int count) {
-    checkIsInMultiOrPipeline();
-    client.clusterGetKeysInSlot(slot, count);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterGetKeysInSlot", "clusterGetKeysInSlot");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterGetKeysInSlot(slot, count);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterSetSlotNode(final int slot, final String nodeId) {
-    checkIsInMultiOrPipeline();
-    client.clusterSetSlotNode(slot, nodeId);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSetSlotNode", "clusterSetSlotNode");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSetSlotNode(slot, nodeId);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterSetSlotMigrating(final int slot, final String nodeId) {
-    checkIsInMultiOrPipeline();
-    client.clusterSetSlotMigrating(slot, nodeId);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSetSlotMigrating", "clusterSetSlotMigrating");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSetSlotMigrating(slot, nodeId);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterSetSlotImporting(final int slot, final String nodeId) {
-    checkIsInMultiOrPipeline();
-    client.clusterSetSlotImporting(slot, nodeId);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSetSlotImporting", "clusterSetSlotImporting");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSetSlotImporting(slot, nodeId);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterSetSlotStable(final int slot) {
-    checkIsInMultiOrPipeline();
-    client.clusterSetSlotStable(slot);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSetSlotStable", "clusterSetSlotStable");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSetSlotStable(slot);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterForget(final String nodeId) {
-    checkIsInMultiOrPipeline();
-    client.clusterForget(nodeId);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterForget", "clusterforget");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterForget(nodeId);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterFlushSlots() {
-    checkIsInMultiOrPipeline();
-    client.clusterFlushSlots();
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterFlushSlots", "clusterFlushSlots");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterFlushSlots();
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long clusterKeySlot(final String key) {
-    checkIsInMultiOrPipeline();
-    client.clusterKeySlot(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterCountKeySlot", "clusterCountKeySlot");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterKeySlot(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long clusterCountKeysInSlot(final int slot) {
-    checkIsInMultiOrPipeline();
-    client.clusterCountKeysInSlot(slot);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterCountKeysInSlot", "clusterCountKeysInSlot");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterCountKeysInSlot(slot);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterSaveConfig() {
-    checkIsInMultiOrPipeline();
-    client.clusterSaveConfig();
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSaveConfig", "clusterSaveConfig");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSaveConfig();
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterReplicate(final String nodeId) {
-    checkIsInMultiOrPipeline();
-    client.clusterReplicate(nodeId);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterReplicate", "clusterReplicate");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterReplicate(nodeId);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<String> clusterSlaves(final String nodeId) {
-    checkIsInMultiOrPipeline();
-    client.clusterSlaves(nodeId);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSlaves", "clusterSlaves");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSlaves(nodeId);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String clusterFailover() {
-    checkIsInMultiOrPipeline();
-    client.clusterFailover();
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterFailover", "clusterFailover");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterFailover();
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<Object> clusterSlots() {
-    checkIsInMultiOrPipeline();
-    client.clusterSlots();
-    return client.getObjectMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.clusterSlots", "clusterSlots");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.clusterSlots();
+      return client.getObjectMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   public String asking() {
-    checkIsInMultiOrPipeline();
-    client.asking();
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.asking", "asking");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.asking();
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   public List<String> pubsubChannels(final String pattern) {
-    checkIsInMultiOrPipeline();
-    client.pubsubChannels(pattern);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pubsubChannels", "pubsubChannels");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pubsubChannels(pattern);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   public Long pubsubNumPat() {
-    checkIsInMultiOrPipeline();
-    client.pubsubNumPat();
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pubsubNumPat", "pubsubNumPat");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pubsubNumPat();
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   public Map<String, String> pubsubNumSub(String... channels) {
-    checkIsInMultiOrPipeline();
-    client.pubsubNumSub(channels);
-    return BuilderFactory.PUBSUB_NUMSUB_MAP.build(client.getBinaryMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pubsubNumSub", "pubsubNumSub");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pubsubNumSub(channels);
+      return BuilderFactory.PUBSUB_NUMSUB_MAP.build(client.getBinaryMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public void close() {
-    if (dataSource != null) {
-      if (client.isBroken()) {
-        this.dataSource.returnBrokenResource(this);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.close", "close");
+
+    try {
+      if (dataSource != null) {
+        if (client.isBroken()) {
+          this.dataSource.returnBrokenResource(this);
+        } else {
+          this.dataSource.returnResource(this);
+        }
       } else {
-        this.dataSource.returnResource(this);
+        client.close();
       }
-    } else {
-      client.close();
+    } finally {
+      span.end();
     }
   }
 
@@ -3442,148 +4700,274 @@ public class Jedis extends BinaryJedis implements JedisCommands, MultiKeyCommand
 
   @Override
   public Long pfadd(final String key, final String... elements) {
-    checkIsInMultiOrPipeline();
-    client.pfadd(key, elements);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pfadd", "pfadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pfadd(key, elements);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public long pfcount(final String key) {
-    checkIsInMultiOrPipeline();
-    client.pfcount(key);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pfcount", "pfcount");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pfcount(key);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public long pfcount(final String... keys) {
-    checkIsInMultiOrPipeline();
-    client.pfcount(keys);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pfcount", "pfcount");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pfcount(keys);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String pfmerge(final String destkey, final String... sourcekeys) {
-    checkIsInMultiOrPipeline();
-    client.pfmerge(destkey, sourcekeys);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.pfmerge", "pfmerge");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.pfmerge(destkey, sourcekeys);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<String> blpop(final int timeout, final String key) {
-    return blpop(key, String.valueOf(timeout));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.blpop", "blpop");
+
+    try {
+      return blpop(key, String.valueOf(timeout));
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<String> brpop(final int timeout, final String key) {
-    return brpop(key, String.valueOf(timeout));
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.brpop", "brpop");
+
+    try {
+      return brpop(key, String.valueOf(timeout));
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long geoadd(final String key, final double longitude, final double latitude, final String member) {
-    checkIsInMultiOrPipeline();
-    client.geoadd(key, longitude, latitude, member);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.geoadd", "geoadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.geoadd(key, longitude, latitude, member);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long geoadd(final String key, final Map<String, GeoCoordinate> memberCoordinateMap) {
-    checkIsInMultiOrPipeline();
-    client.geoadd(key, memberCoordinateMap);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.geoadd", "geoadd");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.geoadd(key, memberCoordinateMap);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Double geodist(final String key, final String member1, final String member2) {
-    checkIsInMultiOrPipeline();
-    client.geodist(key, member1, member2);
-    String dval = client.getBulkReply();
-    return (dval != null ? new Double(dval) : null);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.geodist", "geodist");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.geodist(key, member1, member2);
+      String dval = client.getBulkReply();
+      return (dval != null ? new Double(dval) : null);
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Double geodist(final String key, final String member1, final String member2, final GeoUnit unit) {
-    checkIsInMultiOrPipeline();
-    client.geodist(key, member1, member2, unit);
-    String dval = client.getBulkReply();
-    return (dval != null ? new Double(dval) : null);
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.geodist", "geodist");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.geodist(key, member1, member2, unit);
+      String dval = client.getBulkReply();
+      return (dval != null ? new Double(dval) : null);
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<String> geohash(final String key, String... members) {
-    checkIsInMultiOrPipeline();
-    client.geohash(key, members);
-    return client.getMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.geohash", "goehash");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.geohash(key, members);
+      return client.getMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<GeoCoordinate> geopos(final String key, String... members) {
-    checkIsInMultiOrPipeline();
-    client.geopos(key, members);
-    return BuilderFactory.GEO_COORDINATE_LIST.build(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.geopos", "geopos");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.geopos(key, members);
+      return BuilderFactory.GEO_COORDINATE_LIST.build(client.getObjectMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<GeoRadiusResponse> georadius(final String key, final double longitude, final double latitude,
       final double radius, final GeoUnit unit) {
-    checkIsInMultiOrPipeline();
-    client.georadius(key, longitude, latitude, radius, unit);
-    return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.georadius", "georadius");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.georadius(key, longitude, latitude, radius, unit);
+      return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<GeoRadiusResponse> georadius(final String key, final double longitude, final double latitude,
       final double radius, final GeoUnit unit, final GeoRadiusParam param) {
-    checkIsInMultiOrPipeline();
-    client.georadius(key, longitude, latitude, radius, unit, param);
-    return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.georadius", "georadius");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.georadius(key, longitude, latitude, radius, unit, param);
+      return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<GeoRadiusResponse> georadiusByMember(final String key, final String member, final double radius,
       final GeoUnit unit) {
-    checkIsInMultiOrPipeline();
-    client.georadiusByMember(key, member, radius, unit);
-    return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.georadiusByMember", "georadiusByMember");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.georadiusByMember(key, member, radius, unit);
+      return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<GeoRadiusResponse> georadiusByMember(final String key, final String member, final double radius,
       final GeoUnit unit, final GeoRadiusParam param) {
-    checkIsInMultiOrPipeline();
-    client.georadiusByMember(key, member, radius, unit, param);
-    return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.georadiusByMember", "georadiusByMember");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.georadiusByMember(key, member, radius, unit, param);
+      return BuilderFactory.GEORADIUS_WITH_PARAMS_RESULT.build(client.getObjectMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String moduleLoad(final String path) {
-    client.moduleLoad(path);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.moduleLoad", "moduleLoad");
+
+    try {
+      client.moduleLoad(path);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public String moduleUnload(final String name) {
-    client.moduleUnload(name);
-    return client.getStatusCodeReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.moduleUnload", "moduleUnload");
+
+    try {
+      client.moduleUnload(name);
+      return client.getStatusCodeReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<Module> moduleList() {
-    client.moduleList();
-    return BuilderFactory.MODULE_LIST.build(client.getObjectMultiBulkReply());
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.moduleList", "moduleList");
+
+    try {
+      client.moduleList();
+      return BuilderFactory.MODULE_LIST.build(client.getObjectMultiBulkReply());
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public List<Long> bitfield(final String key, final String...arguments) {
-    checkIsInMultiOrPipeline();
-    client.bitfield(key, arguments);
-    return client.getIntegerMultiBulkReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.bitfield", "bitfield");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.bitfield(key, arguments);
+      return client.getIntegerMultiBulkReply();
+    } finally {
+      span.end();
+    }
   }
 
   @Override
   public Long hstrlen(final String key, final String field) {
-    checkIsInMultiOrPipeline();
-    client.hstrlen(key, field);
-    return client.getIntegerReply();
+    RoundtripTrackingSpan span = Observability.createRoundtripTrackingSpan("redis.clients.Jedis.hstrlen", "hstrlen");
+
+    try {
+      checkIsInMultiOrPipeline();
+      client.hstrlen(key, field);
+      return client.getIntegerReply();
+    } finally {
+      span.end();
+    }
   }
 
 }

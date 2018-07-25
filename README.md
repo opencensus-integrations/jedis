@@ -10,6 +10,23 @@ Jedis was conceived to be EASY to use.
 
 Jedis is fully compatible with redis 2.8.x and 3.x.x.
 
+This client has been instrumented with ![OpenCensus](https://opencensus.io)
+for distributed tracing and monitoring.
+
+## Generating a Jar locally
+
+After cloning this repository locally, with maven, please run
+```shell
+mvn install
+```
+
+and then 
+```shell
+mvn install:install-file -Dfile=$(pwd)/target/jedis-3.0.0-SNAPSHOT.jar \
+-DgroupId=redis.clients -DartifactId=jedis -Dversion=3.0.0 \
+-Dpackaging=jar -DgeneratePom=true
+```
+
 ## Community
 
 Meet us on IRC: ##jedis on freenode.net
@@ -50,7 +67,7 @@ Or use it as a maven dependency:
 <dependency>
     <groupId>redis.clients</groupId>
     <artifactId>jedis</artifactId>
-    <version>2.9.0</version>
+    <version>3.0.0</version>
     <type>jar</type>
     <scope>compile</scope>
 </dependency>
